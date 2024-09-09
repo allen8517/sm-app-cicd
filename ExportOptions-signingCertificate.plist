@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>compileBitcode</key>
+	<false/>
+	<key>destination</key>
+	<string>export</string>
+	<key>method</key>
+	<string>release-testing</string>
+	<key>signingStyle</key>
+	<string>manual</string>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>teamID</key>
+	<string>5NGD3B3V37</string>
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+	<key>signingCertificate</key>
+	<string>Apple Distribution: Shenzhen Snapmaker Technologies Co., Ltd. (5NGD3B3V37)</string>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.snapmaker.lavaapp</key>
+		<string>snapmakerAppAdhoc</string>
+	</dict>
+</dict>
+</plist>
