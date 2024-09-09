@@ -130,7 +130,7 @@ jobs:
       - name: xcodebuild clean
         run: |
           xcodebuild clean \
-            -workspace ./ios/Runner.xcworkspace 
+            -workspace ./ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release
       
