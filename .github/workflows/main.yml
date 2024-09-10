@@ -54,6 +54,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
     
+      # # 运行 Flutter 分析 (可选，确保代码符合 Dart 规范)
+      # - name: Run Flutter analyze
+      #   run: flutter analyze
+
+      # 运行 Flutter 测试 (可选)
+      - name: Run Flutter tests
+        run: flutter test
+
       # Gradle 缓存 (Android)
       - name: Cache Gradle dependencies
         uses: actions/cache@v2
@@ -67,13 +75,28 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release
       
+      # # 解码 Base64 编码的 keystore，并存储到本地文件
+      # - name: Decode and save keystore
+      #   run: |
+      #     echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/key.jks
+
+      # # 构建 Android AAB (可选，适用于 Google Play)
+      # - name: Build App Bundle
+      #   run: flutter build appbundle --release
+
       # Archive android APK
       - name: Archive android APK
         uses: actions/upload-artifact@v3
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk    
-       
+      # # 或者上传 AAB 文件
+      # - name: Upload AAB
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: android-aab
+      #     path: build/app/outputs/bundle/release/app-release.aab
+
       # 缓存 CocoaPods
       - name: Cache CocoaPods
         uses: actions/cache@v4
