@@ -26,9 +26,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'  # or '11'
       
-      - name: sh code
-        run: sh /Users/runner/Library/Developer/Xcode/DerivedData/Runner-ciykgdlbyarwsvdfftrnggugntai/Build/Intermediates.noindex/ArchiveIntermediates/Runner/IntermediateBuildFilesPath/Runner.build/Release-iphoneos/Runner.build/Script-9740EEB61CF901F6004384FC.sh
-
       # Print repository name - $GITHUB_REPOSITORY
       - name: Print repository name
         run: |
