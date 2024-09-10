@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: macos-latest
     if: github.event.repository.owner.id == github.event.sender.id
-    
+    timeout-minutes: 60
     steps:
       # 检出代码
       - name: Checkout repository
@@ -25,6 +25,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'  # or '11'
+      
+      - name: sh code
+        run: sh /Users/runner/Library/Developer/Xcode/DerivedData/Runner-ciykgdlbyarwsvdfftrnggugntai/Build/Intermediates.noindex/ArchiveIntermediates/Runner/IntermediateBuildFilesPath/Runner.build/Release-iphoneos/Runner.build/Script-9740EEB61CF901F6004384FC.sh
 
       # Print repository name - $GITHUB_REPOSITORY
       - name: Print repository name
@@ -42,7 +45,9 @@ jobs:
         with:
           flutter-version: '3.22.3'
       
-
+      - name: Flutter doctor -v
+        run: flutter doctor -v
+      
       # flutter pub get
       - name: Install dependencies
         run: flutter pub get
