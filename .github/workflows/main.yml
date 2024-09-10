@@ -95,9 +95,9 @@ jobs:
       # 导入证书并解锁密钥链
       - name: Install Apple Certificates
         run: |
-          echo "******IOS_CERTIFICATE: $IOS_CERTIFICATE"
-          echo "******IOS_CERTIFICATE_PASSWORD: $IOS_CERTIFICATE_PASSWORD"
-          echo "******IOS_KEYCHAIN_PASSWORD: $IOS_KEYCHAIN_PASSWORD"
+          echo "******IOS_CERTIFICATE: "$IOS_CERTIFICATE""
+          echo "******IOS_CERTIFICATE_PASSWORD: "$IOS_CERTIFICATE_PASSWORD""
+          echo "******IOS_KEYCHAIN_PASSWORD: "$IOS_KEYCHAIN_PASSWORD"""
           echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
           security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
@@ -225,7 +225,7 @@ jobs:
       - name: Notify via Feishu
         if: success() || failure()
         run: |
-          curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
+          curl -X POST "$FEISHU_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d '{
             "msg_type": "text",
