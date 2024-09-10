@@ -87,9 +87,9 @@ jobs:
       #     gem install cocoapods
       #     pod repo update
 
-      # 只有当缓存失效时才会执行 pod install
+      # 只有当缓存失效时才会执行 pod install / pod install --no-repo-update
       - name: Install Pods
-        run: pod install
+        run: pod install --no-repo-update
         working-directory: ios
       
       # 导入证书并解锁密钥链
