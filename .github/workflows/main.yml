@@ -69,12 +69,13 @@ jobs:
        
       # 缓存 CocoaPods
       - name: Cache CocoaPods
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
+          working-directory: ios
 
       # 设置 Ruby 和 CocoaPods 环境
       - name: Set up Ruby
@@ -92,13 +93,14 @@ jobs:
         run: pod install --no-repo-update
         working-directory: ios
       
+      # 清理构建目录
+      - name: Clean DerivedData
+        run: rm -rf ~/Library/Developer/Xcode/DerivedData
+
       # 导入证书并解锁密钥链
       - name: Install Apple Certificates
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "IOS_CERTIFICATE: ${IOS_CERTIFICATE:0:10}..."  # 仅输出证书的前10个字符
-          echo "IOS_CERTIFICATE_PASSWORD: ${IOS_CERTIFICATE_PASSWORD:0:3}..."  # 仅输出前3个字符
-          echo "IOS_KEYCHAIN_PASSWORD: ${IOS_KEYCHAIN_PASSWORD:0:3}..."  # 仅输出前3个字符
           echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
           security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
@@ -115,10 +117,9 @@ jobs:
       - name: Install Apple Provisioning Profile
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "IOS_PROVISIONING_PROFILE: ${IOS_PROVISIONING_PROFILE:0:10}..."  # 仅输出证书的前10个字符
-          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/snapmakerAppAdhoc.mobileprovision
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/snapmakerAppAdhoc.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
         # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件
         env:
           IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
@@ -150,40 +151,43 @@ jobs:
           TEAM_ID: ${{ secrets.TEAM_ID }}
 
       
-      # 清理之前的构建
-      - name: xcodebuild clean
-        run: |
-          xcodebuild clean \
-            -workspace ./ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release
       
       # 构建 iOS 应用
       # 归档项目（.xcarchive 文件）
+      # 清理之前的构建,完成后 再清理
       # Build ios archive 自动签名后面加入-allowProvisioningUpdates
       - name: Archive iOS Build
         run: |
-          xcodebuild archive \
+          xcodebuild clean archive \
             -workspace ./ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive
+            -archivePath build/ios/archive/Runner.xcarchive \
+            clean
 
       - name: Export iOS IPA
         run: |
           xcodebuild \
             -exportArchive \
-            -archivePath build/ios/iphoneos/Runner.xcarchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
             -exportPath build/ios/ipa
-
+            
+            
+    
       # Upload the exported IPA file
-      - name: Upload iOS IPA
+      - name: Upload IOS .ipa to artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ios-ipa
           path: build/ios/ipa/Runner.ipa
-
+      
+      # Ensure this step only runs after the build process to avoid deleting necessary certificates too early
+      - name: Delete certificates
+        run: |
+          rm -f /tmp/certificate.p12
+          rm -f /tmp/profile.mobileprovision
+  
   # 这些任务在 build 成功后运行，分别将 Android 和 iOS 的构建结果（APK 和 .xcarchive）上传为 GitHub Artifacts
   android-deploy:
     runs-on: ubuntu-latest
@@ -219,14 +223,14 @@ jobs:
         with:
           name: ios-dsym
           path: build/ios/archive/Runner.xcarchive/dSYMs/
-  
+       
   notify:
     runs-on: ubuntu-latest
     needs: [android-deploy, ios-deploy]  # 依赖于 android-deploy 和 ios-deploy 的执行结果
     steps:
-      # always()  # 不论前面的 job 成功或失败都会执行
+      # always() / success() || failure() 不论前面的 job 成功或失败都会执行
       - name: Notify via Feishu
-        if: success() || failure()
+        if: always()
         run: |
           curl -X POST "$FEISHU_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
