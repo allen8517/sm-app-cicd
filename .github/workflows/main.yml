@@ -132,7 +132,7 @@ jobs:
           echo "  <key>thinning</key>" >> ios/ExportOptions.plist
           echo "  <string>&lt;none&gt;</string>" >> ios/ExportOptions.plist
           echo "  <key>teamID</key>" >> ios/ExportOptions.plist
-          echo "  <string>$TEAM_ID</string>" >> ios/ExportOptions.plist
+          echo "  <string>${TEAM_ID}</string>" >> ios/ExportOptions.plist
           echo "</dict>" >> ios/ExportOptions.plist
           echo "</plist>" >> ios/ExportOptions.plist
         
