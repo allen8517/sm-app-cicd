@@ -167,15 +167,15 @@ jobs:
       - name: Build iOS App
         run: flutter build ios --release --no-codesign
 
-      # # Set up Apple Certificate and Profile for signing
-      # - name: Set up Signing Certificates and Provisioning Profiles
-      #   uses: apple-actions/import-codesign-certs@v3
-      #   with:
-      #     p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
-      #     p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      #     provisioning-profile-base64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-      #     keychain: 'tempKeychina'
-      #     keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      # Set up Apple Certificate and Profile for signing
+      - name: Set up Signing Certificates and Provisioning Profiles
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          provisioning-profile-base64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          keychain: 'tempKeychina'
+          keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
 
       # Archive the iOS app for deployment or further actions
       - name: Archive the iOS App
