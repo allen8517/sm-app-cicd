@@ -169,7 +169,8 @@ jobs:
             -exportArchive \
             -archivePath $PWD/build/ios/archive/Runner.xcarchive \
             -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath $PWD/build/ios/ipa/snapmaker.ipa
+            -exportPath $PWD/build/ios/ipa/snapmaker.ipa \
+            -allowProvisioningUpdates
     
       - name: Upload build artifacts
         if: always()
