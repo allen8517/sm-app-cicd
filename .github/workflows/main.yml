@@ -43,11 +43,9 @@ jobs:
           flutter-version: '3.22.3'
       
       - name: Flutter doctor -v
-        run: flutter doctor -v
-      
-      - name: Set FLUTTER_ROOT environment variable
         run: |
-          echo "##[set-env name=FLUTTER_ROOT]${{ steps.setup-flutter.outputs.flutter_directory }}"
+          flutter doctor -v
+          which flutter
       
       - name: Setup Flutter Engine
         run: |
