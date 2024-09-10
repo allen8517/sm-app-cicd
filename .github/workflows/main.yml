@@ -151,60 +151,49 @@ jobs:
             -scheme Runner \
             -configuration Release
 
-      # flutter build ipa  --export-method: ad-hoc, development, enterprise
-      - name: Flutter build ipa and Export iOS IPA
+      - name: Build iOS app with code signing
         run: |
-          flutter build ipa --release --export-options-plist=ExportOptions-signingCertificate.plist            
+          flutter build ios --release --no-codesign
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            -allowProvisioningUpdates \
+            archive -archivePath build/ios/Runner.xcarchive
+            - name: Export the signed IPA
+            run: |
+              xcodebuild \
+                -exportArchive \
+                -archivePath build/ios/Runner.xcarchive \
+                -exportOptionsPlist ios/Runner/ExportOptions.plist \
+                -exportPath build/ios
     
-      # Upload the exported IPA file
-      - name: Upload IOS .ipa to artifacts
+      - name: Upload build artifacts
+        if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: ios-ipa
-          path: build/ios/ipa/Runner.ipa
+          name: ios-build
+          path: build/ios/*.ipa
+
+      # flutter build ipa  --export-method: ad-hoc, development, enterprise
+      # - name: Flutter build ipa and Export iOS IPA
+      #   run: |
+      #     flutter build ipa --release --export-options-plist=ExportOptions-signingCertificate.plist            
+    
+      # # Upload the exported IPA file
+      # - name: Upload IOS .ipa to artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ios-ipa
+      #     path: build/ios/ipa/Runner.ipa
       
       # Ensure this step only runs after the build process to avoid deleting necessary certificates too early
       - name: Delete certificates
         run: |
           rm -f /tmp/certificate.p12
           rm -f /tmp/profile.mobileprovision
-  
-  # 这些任务在 build 成功后运行，分别将 Android 和 iOS 的构建结果（APK 和 .xcarchive）上传为 GitHub Artifacts
-  # android-deploy:
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   if: github.ref == 'refs/heads/main'
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-
-  #     - name: Upload Android APK to GitHub
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: app-release.apk
-  #         path: build/app/outputs/flutter-apk/app-release.apk
-
-  ios-deploy:
-    runs-on: macos-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Upload iOS Archive to GitHub
-        uses: actions/upload-artifact@v3
-        with:
-          name: Runner.xcarchive
-          path: build/ios/archive/Runner.xcarchive
-
-      # Upload the dSYM file (Symbols for debugging)
-      - name: Upload dSYM
-        uses: actions/upload-artifact@v3
-        with:
-          name: ios-dsym
-          path: build/ios/archive/Runner.xcarchive/dSYMs/
-       
+    
   notify:
     runs-on: ubuntu-latest
     # needs: [android-deploy, ios-deploy]  # 依赖于 android-deploy 和 ios-deploy 的执行结果
