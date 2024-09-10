@@ -56,16 +56,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-      # Build Android APK
-      - name: Build Android APK
-        run: flutter build apk --release
+      # # Build Android APK
+      # - name: Build Android APK
+      #   run: flutter build apk --release
       
-      # Archive android APK
-      - name: Archive android APK
-        uses: actions/upload-artifact@v3
-        with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk    
+      # # Archive android APK
+      # - name: Archive android APK
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: android-apk
+      #     path: build/app/outputs/flutter-apk/app-release.apk    
        
       # 缓存 CocoaPods
       - name: Cache CocoaPods
@@ -95,6 +95,9 @@ jobs:
       # 导入证书并解锁密钥链
       - name: Install Apple Certificates
         run: |
+          echo "******IOS_CERTIFICATE: $IOS_CERTIFICATE"
+          echo "******IOS_CERTIFICATE_PASSWORD: $IOS_CERTIFICATE_PASSWORD"
+          echo "******IOS_KEYCHAIN_PASSWORD: $IOS_KEYCHAIN_PASSWORD"
           echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
           security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
@@ -192,20 +195,6 @@ jobs:
         with:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
-      
-      - name: Notify via Feishu
-        if: success() || failure()
-        run: |
-          curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
-          -H 'Content-Type: application/json' \
-          -d '{
-            "msg_type": "text",
-            "content": {
-              "text": "CI/CD Job Status: '$GITHUB_JOB' \nStatus: ${{ job.status }}\nDetails: ${{ github.server_url }}/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            }
-          }'
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
   ios-deploy:
     runs-on: macos-latest
@@ -227,20 +216,6 @@ jobs:
         with:
           name: ios-dsym
           path: build/ios/archive/Runner.xcarchive/dSYMs/
-        
-      - name: Notify via Feishu
-        if: success() || failure()
-        run: |
-          curl -X POST ${{ secrets.FEISHU_WEBHOOK_URL }} \
-          -H 'Content-Type: application/json' \
-          -d '{
-            "msg_type": "text",
-            "content": {
-              "text": "CI/CD Job Status: '$GITHUB_JOB' \nStatus: ${{ job.status }}\nDetails: ${{ github.server_url }}/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            }
-          }'
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
   
   notify:
     runs-on: ubuntu-latest
