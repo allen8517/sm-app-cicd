@@ -97,9 +97,9 @@ jobs:
          echo "## FLUTTER_ROOT: $FLUTTER_ROOT"
 
       # 只有当缓存失效时才会执行 pod install / pod install --no-repo-update
-      # - name: Install Pods
-      #   run: pod install --no-repo-update
-      #   working-directory: ios
+      - name: Install Pods
+        run: pod install --no-repo-update
+        working-directory: ios
       
       - name: Install End Output FLUTTER_ROOT
         run: |
