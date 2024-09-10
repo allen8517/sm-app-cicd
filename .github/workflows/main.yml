@@ -252,7 +252,7 @@ jobs:
             -d '{
             "msg_type": "text",
             "content": {
-              "text": "CI/CD Job Status: \nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nDetails: ${{ github.server_url }}/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              "text": "CI/CD Job Status: \nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nDetails: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
           }'
         env:
