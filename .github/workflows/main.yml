@@ -187,12 +187,13 @@ jobs:
             -configuration Release \
             -allowProvisioningUpdates \
             archive -archivePath build/ios/Runner.xcarchive
+            
       - name: Export the signed IPA
         run: |
          xcodebuild \
           -exportArchive \
           -archivePath build/ios/Runner.xcarchive \
-          -exportOptionsPlist ios/Runner/ExportOptions.plist \
+          -exportOptionsPlist ExportOptions.plist \
           -exportPath build/ios
     
       - name: Upload build artifacts
