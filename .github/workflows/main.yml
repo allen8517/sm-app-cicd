@@ -87,10 +87,10 @@ jobs:
       #     gem install cocoapods
       #     pod repo update
 
-      # # 只有当缓存失效时才会执行 pod install
-      # - name: Install Pods
-      #   run: pod install
-      #   working-directory: ios
+      # 只有当缓存失效时才会执行 pod install
+      - name: Install Pods
+        run: pod install
+        working-directory: ios
       
       # 导入证书并解锁密钥链
       - name: Install Apple Certificates
