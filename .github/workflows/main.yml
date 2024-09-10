@@ -10,6 +10,13 @@ on:
     branches:
       - main
 
+env:
+  METHOD: "release-testing"
+  TEAM_ID: "5NGD3B3V37"
+  SIGNING_CERTIFICATE: "Apple Distribution: Shenzhen Snapmaker Technologies Co., Ltd. (5NGD3B3V37)"
+  PROVISIONGPROFILENAME: "snapmakerAppAdhoc"
+  BUILD_ID: "com.snapmaker.lavaapp"
+
 jobs:
   build:
     runs-on: macos-latest
@@ -111,31 +118,36 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           
-      # Create ExportOptions.plist <!- `{app-store-connect, release-testing, enterprise, debugging, validation}` 是用于 `method` 的一些常见值 -->
-      - name: Create Apple ExportOptions.plist
-        env:
-          TEAM_ID: ${{ secrets.TEAM_ID }}
+      # Create ios/ExportOptions.plist <!- `{app-store-connect, release-testing, enterprise, debugging, validation}` 是用于 `method` 的一些常见值 -->
+      - name: Create Apple ios/ExportOptions.plist
         run: |
-          echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > ios/ExportOptions.plist
-          echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> ios/ExportOptions.plist
-          echo "<plist version=\"1.0\">" >> ios/ExportOptions.plist
-          echo "<dict>" >> ios/ExportOptions.plist 
-          echo "  <key>method</key>" >> ios/ExportOptions.plist
-          echo "  <string>release-testing</string>" >> ios/ExportOptions.plist
-          echo "  <key>uploadBitcode</key>" >> ios/ExportOptions.plist
-          echo "  <false/>" >> ios/ExportOptions.plist
-          echo "  <key>compileBitcode</key>" >> ios/ExportOptions.plist
-          echo "  <false/>" >> ios/ExportOptions.plist
-          echo "  <key>uploadSymbols</key>" >> ios/ExportOptions.plist
-          echo "  <true/>" >> ios/ExportOptions.plist
-          echo "  <key>signingStyle</key>" >> ios/ExportOptions.plist
-          echo "  <string>automatic</string>" >> ios/ExportOptions.plist
-          echo "  <key>thinning</key>" >> ios/ExportOptions.plist
-          echo "  <string>&lt;none&gt;</string>" >> ios/ExportOptions.plist
-          echo "  <key>teamID</key>" >> ios/ExportOptions.plist
-          echo "  <string>${TEAM_ID}</string>" >> ios/ExportOptions.plist
-          echo "</dict>" >> ios/ExportOptions.plist
-          echo "</plist>" >> ios/ExportOptions.plist
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > ios/ExportOptions.plist
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> ios/ExportOptions.plist
+          echo '<plist version="1.0">' >> ios/ExportOptions.plist
+          echo '<dict>' >> ios/ExportOptions.plist
+          echo '	<key>compileBitcode</key>' >> ios/ExportOptions.plist
+          echo '	<false/>' >> ios/ExportOptions.plist
+          echo '	<key>destination</key>' >> ios/ExportOptions.plist
+          echo '	<string>export</string>' >> ios/ExportOptions.plist
+          echo '	<key>method</key>' >> ios/ExportOptions.plist
+          echo "	<string>${{ env.METHOD }}</string>" >> ios/ExportOptions.plist
+          echo '	<key>signingStyle</key>' >> ios/ExportOptions.plist
+          echo '	<string>manual</string>' >> ios/ExportOptions.plist
+          echo '	<key>stripSwiftSymbols</key>' >> ios/ExportOptions.plist
+          echo '	<true/>' >> ios/ExportOptions.plist
+          echo '	<key>teamID</key>' >> ios/ExportOptions.plist
+          echo "	<string>${{ env.TEAM_ID }}</string>" >> ios/ExportOptions.plist
+          echo '	<key>thinning</key>' >> ios/ExportOptions.plist
+          echo '	<string>&lt;none&gt;</string>' >> ios/ExportOptions.plist
+          echo '	<key>signingCertificate</key>' >> ios/ExportOptions.plist
+          echo "	<string>${{ env.SIGNING_CERTIFICATE }}</string>" >> ios/ExportOptions.plist
+          echo '	<key>provisioningProfiles</key>' >> ios/ExportOptions.plist
+          echo '	<dict>' >> ios/ExportOptions.plist
+          echo '		<key>${{ env.BUILD_ID }}</key>' >> ios/ExportOptions.plist
+          echo '		<string>${{ env.PROVISIONGPROFILENAME }}</string>' >> ios/ExportOptions.plist
+          echo '	</dict>' >> ios/ExportOptions.plist
+          echo '</dict>' >> ios/ExportOptions.plist
+          echo '</plist>' >> ios/ExportOptions.plist
        
       - name: Output ios/ExportOptions file to log
         run: cat ios/ExportOptions.plist
@@ -172,7 +184,7 @@ jobs:
           xcodebuild \
             -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist ExportOptions-signingCertificate.plist \
+            -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath build/ios/ipa/snapmaker.ipa \
     
       - name: Upload build ios artifacts
@@ -184,7 +196,7 @@ jobs:
       # flutter build ipa  --export-method: ad-hoc, development, enterprise
       # - name: Flutter build ipa and Export iOS IPA
       #   run: |
-      #     flutter build ipa --release --export-options-plist=ExportOptions-signingCertificate.plist            
+      #     flutter build ipa --release --export-options-plist=ios/ExportOptions-signingCertificate.plist            
     
       # Ensure this step only runs after the build process to avoid deleting necessary certificates too early
       # - name: Delete certificates
