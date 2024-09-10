@@ -111,30 +111,30 @@ jobs:
           IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
           
       # Create ExportOptions.plist <!- `{app-store-connect, release-testing, enterprise, debugging, validation}` 是用于 `method` 的一些常见值 -->
-      # - name: Create Apple ExportOptions.plist
-      #   run: |
-      #     echo '<?xml version="1.0" encoding="UTF-8"?>
-      #           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      #           <plist version="1.0">
-      #           <dict>
-      #               <key>compileBitcode</key>
-      #               <false/>
-      #               <key>destination</key>
-      #               <string>export</string>
-      #               <key>method</key>
-      #               <string>release-testing</string>
-      #               <key>signingStyle</key>
-      #               <string>automatic</string>
-      #               <key>stripSwiftSymbols</key>
-      #               <true/>
-      #               <key>teamID</key>
-      #               <string>"$TEAM_ID"</string>
-      #               <key>thinning</key>
-      #               <string>&lt;none&gt;</string>
-      #           </dict>
-      #           </plist>' > ExportOptions.plist
-      #   env:
-      #     TEAM_ID: ${{ secrets.TEAM_ID }}
+      - name: Create Apple ExportOptions.plist
+        run: |
+          echo '<?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0">
+                <dict>
+                    <key>compileBitcode</key>
+                    <false/>
+                    <key>destination</key>
+                    <string>export</string>
+                    <key>method</key>
+                    <string>release-testing</string>
+                    <key>signingStyle</key>
+                    <string>automatic</string>
+                    <key>stripSwiftSymbols</key>
+                    <true/>
+                    <key>teamID</key>
+                    <string>"$TEAM_ID"</string>
+                    <key>thinning</key>
+                    <string>&lt;none&gt;</string>
+                </dict>
+                </plist>' > ExportOptions.plist
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
       
       # 构建 iOS 应用
       # 归档项目（.xcarchive 文件）
@@ -149,7 +149,7 @@ jobs:
 
       # Set up Apple Certificate and Profile for signing
       - name: Set up Signing Certificates and Provisioning Profiles
-        uses: apple-actions/import-codesign-certs@v1
+        uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
           p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -174,7 +174,7 @@ jobs:
           xcodebuild \
             -exportArchive \
             -archivePath $PWD/build/Runner.xcarchive \
-            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportOptionsPlist ExportOptions.plist \
             -exportPath $PWD/build/Runner.ipa
       
       - name: Build iOS app with code signing
@@ -187,7 +187,7 @@ jobs:
             -configuration Release \
             -allowProvisioningUpdates \
             archive -archivePath build/ios/Runner.xcarchive
-            
+
       - name: Export the signed IPA
         run: |
          xcodebuild \
