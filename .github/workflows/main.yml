@@ -49,11 +49,6 @@ jobs:
         run: |
           echo "##[set-env name=FLUTTER_ROOT]${{ steps.setup-flutter.outputs.flutter_directory }}"
       
-      - name: Setup Xcode
-        uses: apple/setup-xcode@v1
-        with:
-          xcversion: '15.4'
-      
       - name: Setup Flutter Engine
         run: |
             FLUTTER_ROOT=/custom/flutter/path
