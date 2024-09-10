@@ -42,15 +42,36 @@ jobs:
         with:
           flutter-version: '3.22.3'
       
-      - name: Flutter doctor -v
-        run: |
-          flutter doctor -v
-          which flutter
-      
-      # flutter pub get
+      # - name: Flutter doctor -v
+      #   run: |
+      #     flutter doctor -v
+      #     which flutter
+
+      # 在构建之前执行 flutter clean
+      - name: Flutter Clean
+        run: flutter clean
+       # flutter pub get
       - name: Install dependencies
         run: flutter pub get
       
+
+        
+      # Build Android APK
+      - name: Build Android APK
+        run: |
+          flutter build apk --release
+      
+      # Archive android APK
+      - name: Archive android APK
+        uses: actions/upload-artifact@v3
+        with:
+           name: android-apk
+           path: build/app/outputs/flutter-apk/app-release.apk    
+       
+           
+     
+      
+    
       # Gradle 缓存 (Android)
       - name: Cache Gradle dependencies
         uses: actions/cache@v2
@@ -60,16 +81,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-      # # Build Android APK
-      # - name: Build Android APK
-      #   run: flutter build apk --release
+      # Build Android APK
+      - name: Build Android APK
+        run: flutter build apk --release
       
-      # # Archive android APK
-      # - name: Archive android APK
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: android-apk
-      #     path: build/app/outputs/flutter-apk/app-release.apk    
+      # Archive android APK
+      - name: Archive android APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk    
        
       # 缓存 CocoaPods
       - name: Cache CocoaPods
@@ -162,35 +183,26 @@ jobs:
                 </plist>' > ExportOptions.plist
         env:
           TEAM_ID: ${{ secrets.TEAM_ID }}
-
-      
       
       # 构建 iOS 应用
       # 归档项目（.xcarchive 文件）
       # 清理之前的构建,完成后 再清理
       # Build ios archive 自动签名后面加入-allowProvisioningUpdates
-      - name: flutter build ios export .app文件
-        run: |
-          flutter build ios --release --no-codesign
+      # - name: flutter build ios export .app文件
+      #   run: |
+      #     flutter build ios --release --no-codesign
       
-      - name: Archive iOS Build
+      - name: Clean Build
         run: |
-          xcodebuild archive \
+          xcodebuild clean \
             -workspace ./ios/Runner.xcworkspace \
             -scheme Runner \
-            -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            clean
+            -configuration Release
 
-      - name: Export iOS IPA
+      # flutter build ipa  --export-method: ad-hoc, development, enterprise
+      - name: Flutter build ipa and Export iOS IPA
         run: |
-          xcodebuild \
-            -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/ios/ipa
-            
-            
+          flutter build ipa --release --export-options-plist=ExportOptions.plist            
     
       # Upload the exported IPA file
       - name: Upload IOS .ipa to artifacts
