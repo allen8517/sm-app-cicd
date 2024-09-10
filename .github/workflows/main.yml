@@ -45,6 +45,26 @@ jobs:
       - name: Flutter doctor -v
         run: flutter doctor -v
       
+      - name: Set FLUTTER_ROOT environment variable
+        run: |
+          echo "##[set-env name=FLUTTER_ROOT]${{ steps.setup-flutter.outputs.flutter_directory }}"
+      
+      - name: Setup Xcode
+        uses: apple/setup-xcode@v1
+        with:
+          xcversion: '15.4'
+      
+      - name: Setup Flutter Engine
+        run: |
+            FLUTTER_ROOT=/custom/flutter/path
+            echo "FLUTTER_ROOT=$FLUTTER_ROOT" >> /etc/profile
+            echo "export FLUTTER_ROOT=$FLUTTER_ROOT" >> ${GITHUB_WORKSPACE}/.github/workflows/ios.xcargspath
+      - name: Setup Flutter SDK for iOS
+        run: |
+            /bin/bash -c "echo 'exec flutter $@' > /tmp/flutter"
+            chmod +x /tmp/flutter
+            mv /tmp/flutter $FLUTTER_ROOT/bin/flutter
+
       # flutter pub get
       - name: Install dependencies
         run: flutter pub get
@@ -73,8 +93,8 @@ jobs:
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
-          path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          path: Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('Podfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pods-
           working-directory: ios
