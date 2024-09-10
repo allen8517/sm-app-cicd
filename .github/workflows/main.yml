@@ -171,6 +171,7 @@ jobs:
       # Build ios archive 自动签名后面加入-allowProvisioningUpdates
       - name: Archive iOS Build
         run: |
+          flutter build ios --release
           xcodebuild clean archive \
             -workspace ./ios/Runner.xcworkspace \
             -scheme Runner \
