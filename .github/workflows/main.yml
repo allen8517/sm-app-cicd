@@ -18,7 +18,7 @@ jobs:
     steps:
       # 检出代码
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Java for Android build
         uses: actions/setup-java@v3
@@ -28,7 +28,7 @@ jobs:
 
       # 设置 Flutter 环境
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           flutter-version: '3.22.3'
     
@@ -83,32 +83,32 @@ jobs:
       - name: Clean DerivedData
         run: rm -rf ~/Library/Developer/Xcode/DerivedData
 
-      # 导入证书并解锁密钥链
-      - name: Install Apple Certificates
-        # 通过 env 传递 GitHub Secrets
-        env:
-          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-        run: |
-          echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
-          security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
-          security list-keychains -s ~/Library/Keychains/build.keychain
-          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
+      # # 导入证书并解锁密钥链
+      # - name: Install Apple Certificates
+      #   # 通过 env 传递 GitHub Secrets
+      #   env:
+      #     IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
+      #     IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      #     IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      #   run: |
+      #     echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
+      #     echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+      #     security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
+      #     security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+      #     security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+      #     security list-keychains -s ~/Library/Keychains/build.keychain
+      #     security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
       
-      # 安装描述文件
-      - name: Install Apple Provisioning Profile
-        # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件
-        env:
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-        run: |
-          echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+      # # 安装描述文件
+      # - name: Install Apple Provisioning Profile
+      #   # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件
+      #   env:
+      #     IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+      #   run: |
+      #     echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
+      #     echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
+      #     mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+      #     cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
           
       # Create ExportOptions.plist <!- `{app-store-connect, release-testing, enterprise, debugging, validation}` 是用于 `method` 的一些常见值 -->
       - name: Create Apple ExportOptions.plist
@@ -167,16 +167,15 @@ jobs:
         run: |
           xcodebuild \
             -exportArchive \
-            -archivePath $PWD/build/ios/archive/Runner.xcarchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
             -exportOptionsPlist ExportOptions-signingCertificate.plist \
-            -exportPath $PWD/build/ios/ipa/snapmaker.ipa \
+            -exportPath build/ios/ipa/snapmaker.ipa \
     
-      - name: Upload build artifacts
-        if: always()
+      - name: Upload build ios artifacts
         uses: actions/upload-artifact@v3
         with:
           name: ios-ipa
-          path: $PWD/build/ios/ipa/snapmaker.ipa
+          path: build/ios/ipa/snapmaker.ipa
 
       # flutter build ipa  --export-method: ad-hoc, development, enterprise
       # - name: Flutter build ipa and Export iOS IPA
