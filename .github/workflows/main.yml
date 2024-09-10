@@ -91,12 +91,17 @@ jobs:
       #     gem install cocoapods
       #     pod repo update
 
+      - name: Install Start Output FLUTTER_ROOT
+        run: |
+         FLUTTER_ROOT=$(grep FLUTTER_ROOT ./ios/Flutter/Generated.xcconfig | cut -d '=' -f2)
+         echo "## FLUTTER_ROOT: $FLUTTER_ROOT"
+
       # 只有当缓存失效时才会执行 pod install / pod install --no-repo-update
-      - name: Install Pods
-        run: pod install --no-repo-update
-        working-directory: ios
+      # - name: Install Pods
+      #   run: pod install --no-repo-update
+      #   working-directory: ios
       
-      - name: Output FLUTTER_ROOT
+      - name: Install End Output FLUTTER_ROOT
         run: |
           FLUTTER_ROOT=$(grep FLUTTER_ROOT ./ios/Flutter/Generated.xcconfig | cut -d '=' -f2)
           echo "## FLUTTER_ROOT: $FLUTTER_ROOT"
