@@ -169,10 +169,13 @@ jobs:
       # 归档项目（.xcarchive 文件）
       # 清理之前的构建,完成后 再清理
       # Build ios archive 自动签名后面加入-allowProvisioningUpdates
+      - name: flutter build ios export .app文件
+        run: |
+          flutter build ios --release --no-codesign
+      
       - name: Archive iOS Build
         run: |
-          flutter build ios --release
-          xcodebuild clean archive \
+          xcodebuild archive \
             -workspace ./ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
