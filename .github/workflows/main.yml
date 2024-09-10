@@ -124,11 +124,11 @@ jobs:
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
           echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" tempKeychina.keychain
-          security import /tmp/certificate.p12 -k tempKeychina.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-keychain-settings -t 3600 -l ~/Library/Keychains/tempKeychina.keychain
-          security list-keychains -s ~/Library/Keychains/tempKeychina.keychain
-          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/tempKeychina.keychain
+          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
+          security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+          security list-keychains -s ~/Library/Keychains/build.keychain
+          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
       
       # 安装描述文件
       - name: Install Apple Provisioning Profile
