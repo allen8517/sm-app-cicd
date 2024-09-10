@@ -26,17 +26,7 @@ jobs:
       # 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      # Print repository name - $GITHUB_REPOSITORY
-      - name: Print repository name
-        run: |
-         echo "Repository: $GITHUB_REPOSITORY"
-     
-      # Print GitHub run URL - $GITHUB_RUN_ID
-      - name: Print GitHub run URL
-        run: |
-          echo "Run URL: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-
+  
       # 设置java环境
       - name: Set up Java for Android build
         uses: actions/setup-java@v3
@@ -64,25 +54,25 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
     
-      # # Gradle 缓存 (Android)
-      # - name: Cache Gradle dependencies
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: ~/.gradle/caches
-      #     key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-gradle-
+      # Gradle 缓存 (Android)
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
       
-      # # Build Android APK
-      # - name: Build Android APK
-      #   run: flutter build apk --release
+      # Build Android APK
+      - name: Build Android APK
+        run: flutter build apk --release
       
-      # # Archive android APK
-      # - name: Archive android APK
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: android-apk
-      #     path: build/app/outputs/flutter-apk/app-release.apk    
+      # Archive android APK
+      - name: Archive android APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk    
        
       # 缓存 CocoaPods
       - name: Cache CocoaPods
@@ -111,11 +101,11 @@ jobs:
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
           echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
-          security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
-          security list-keychains -s ~/Library/Keychains/build.keychain
-          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
+          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" tempKeychina.keychain
+          security import /tmp/certificate.p12 -k tempKeychina.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-keychain-settings -t 3600 -l ~/Library/Keychains/tempKeychina.keychain
+          security list-keychains -s ~/Library/Keychains/tempKeychina.keychain
+          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/tempKeychina.keychain
       
       # 安装描述文件
       - name: Install Apple Provisioning Profile
@@ -197,6 +187,11 @@ jobs:
             -exportOptionsPlist ios/ExportOptions.plist \
             -exportPath build/ios/ipa/snapmaker.ipa \
 
+      - name: Upload build ios artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-ipa
+          path: build/ios/ipa/snapmaker.ipa
       # flutter build ipa  --export-method: ad-hoc, development, enterprise
       # - name: Flutter build ipa and Export iOS IPA
       #   run: |
@@ -214,24 +209,19 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Upload Android APK to GitHub
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+      - name: android-deploy
+        run: echo android-deploy
+      # - name: Upload Android APK to GitHub
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: app-release.apk
+      #     path: build/app/outputs/flutter-apk/app-release.apk
 
   ios-deploy:
     runs-on: macos-latest
     needs: build
     if: github.ref == 'refs/heads/main'
     steps:
-
-      - name: Upload build ios artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: ios-ipa
-          path: build/ios/ipa/snapmaker.ipa
-
       # Upload the dSYM file (Symbols for debugging)
       - name: Upload dSYM
         uses: actions/upload-artifact@v3
