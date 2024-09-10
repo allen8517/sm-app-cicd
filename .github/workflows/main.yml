@@ -47,17 +47,6 @@ jobs:
           flutter doctor -v
           which flutter
       
-      - name: Setup Flutter Engine
-        run: |
-            FLUTTER_ROOT=/custom/flutter/path
-            echo "FLUTTER_ROOT=$FLUTTER_ROOT" >> /etc/profile
-            echo "export FLUTTER_ROOT=$FLUTTER_ROOT" >> ${GITHUB_WORKSPACE}/.github/workflows/ios.xcargspath
-      - name: Setup Flutter SDK for iOS
-        run: |
-            /bin/bash -c "echo 'exec flutter $@' > /tmp/flutter"
-            chmod +x /tmp/flutter
-            mv /tmp/flutter $FLUTTER_ROOT/bin/flutter
-
       # flutter pub get
       - name: Install dependencies
         run: flutter pub get
@@ -108,6 +97,11 @@ jobs:
         run: pod install --no-repo-update
         working-directory: ios
       
+      - name: Output FLUTTER_ROOT
+        run: |
+          FLUTTER_ROOT=$(grep FLUTTER_ROOT ./ios/Flutter/Generated.xcconfig | cut -d '=' -f2)
+          echo "## FLUTTER_ROOT: $FLUTTER_ROOT"
+
       # 清理构建目录
       - name: Clean DerivedData
         run: rm -rf ~/Library/Developer/Xcode/DerivedData
