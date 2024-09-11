@@ -1,6 +1,6 @@
 name: Flutter CI/CD
 # base64 -i PROVISIONING_PROFILE.mobileprovision | pbcopy
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} ${{ github.triggering_actor }} is testing out GitHub Actions 🚀
 on:
   # watch:
   #   types: started
@@ -106,23 +106,18 @@ jobs:
         run: |
           flutter build apk --release
 
-      - name: Build Android APK (sign_app)
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app #sign_aab
-        with:
-          releaseDirectory: build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
-          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        env:
-          # override default build-tools version (33.0.0) -- optional
-          BUILD_TOOLS_VERSION: "34.0.0"
-
-      # # 解码 Base64 编码的 keystore，并存储到本地文件
-      # - name: Decode and save keystore
-      #   run: |
-      #     echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/key.jks
+      # - name: Build Android APK (sign_app)
+      #   uses: r0adkll/sign-android-release@v1
+      #   id: sign_app #sign_aab
+      #   with:
+      #     releaseDirectory: build/outputs/apk/release
+      #     signingKeyBase64: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
+      #     alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+      #     keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      #     keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      #   env:
+      #     # override default build-tools version (33.0.0) -- optional
+      #     BUILD_TOOLS_VERSION: "34.0.0"
 
       # # 构建 Android AAB (可选，适用于 Google Play)
       # - name: Build App Bundle
