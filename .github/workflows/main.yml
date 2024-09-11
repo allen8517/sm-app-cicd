@@ -71,16 +71,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
+
+      # Decrypt the keystore from the GitHub secret and save it
+      - name: Decode keystore
+        run: |
+         echo ${{ secrets.ANDROID_ENCODED_KEYSTORE }} | base64 --decode > android/app/keystore.jks
+
+      # Set up environment variables for signing config
+      - name: Set up environment, Create key.properties
+        run: |
+          cat <<EOF > android/key.properties
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=keystore.jks
+          EOF
+          
       # Build Android APK
       - name: Build Android APK
         run: |
-          echo $ENCODED_KEYSTORE | base64 --decode > android/app/keystore.jks
           flutter build apk --release
-        env:
-          ENCODED_KEYSTORE: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD}}
 
       - name: Build Android APK (sign_app)
         uses: r0adkll/sign-android-release@v1
