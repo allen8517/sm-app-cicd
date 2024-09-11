@@ -73,8 +73,28 @@ jobs:
       
       # Build Android APK
       - name: Build Android APK
-        run: flutter build apk --release
-      
+        run: |
+          echo $ENCODED_KEYSTORE | base64 -di > android/app/keystore.jks
+          flutter build apk --release
+        env:
+          ENCODED_KEYSTORE: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD}}
+
+      - name: Build Android APK (sign_app)
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app #sign_aab
+        with:
+          releaseDirectory: build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
+          alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        env:
+          # override default build-tools version (33.0.0) -- optional
+          BUILD_TOOLS_VERSION: "34.0.0"
+
       # # 解码 Base64 编码的 keystore，并存储到本地文件
       # - name: Decode and save keystore
       #   run: |
@@ -265,8 +285,18 @@ jobs:
             -d '{
             "msg_type": "text",
             "content": {
-              "text": "CI/CD Job Status: \nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nDetails: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }
-          }'
+              "text": "CI/CD Job Status: \n
+                      Android Job: ${{ needs.android-deploy.result }} \n
+                      iOS Job: ${{ needs.ios-deploy.result }}\n
+                      Url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n
+                      Commit: ${{ github.sha }}\n
+                      Commit Message:: ${{ github.event.head_commit.message }}\n
+                      Author: ${{ github.actor }}\n
+                      PR Number: ${{ github.event.pull_request.number }}\n
+                      PR Title: ${{ github.event.pull_request.title }}\n
+                      PR Description: ${{ github.event.pull_request.body }}
+                      PR Commit SHA: ${{ github.event.pull_request.head.sha }}\n"
+              }
+            }'
         env:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}

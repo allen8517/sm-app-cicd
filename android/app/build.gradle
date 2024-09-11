@@ -13,6 +13,13 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
 if (flutterVersionCode == null) {
     flutterVersionCode = "1"
@@ -25,12 +32,57 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.smapp"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk 33
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    // 1. 在 android 块中定义签名配置
+//    signingConfigs {
+//        release {
+//            keyAlias System.getenv("KEY_ALIAS")
+//            keyPassword System.getenv("KEY_PASSWORD")
+//            storeFile file(System.getenv("KEYSTORE_PATH"))
+//            storePassword System.getenv("KEYSTORE_PASSWORD")
+//        }
+//    }
+
+//    signingConfigs {
+//        release {
+//            keyAlias = keystoreProperties['keyAlias']
+//            keyPassword = keystoreProperties['keyPassword']
+//            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+//            storePassword = keystoreProperties['storePassword']
+//        }
+//    }
+
+    signingConfigs {
+        release {
+            keyAlias project.findProperty("KEY_ALIAS") ?: ""
+            keyPassword project.findProperty("KEY_PASSWORD") ?: ""
+            storeFile file(project.findProperty("KEYSTORE_PATH") ?: "")
+            storePassword project.findProperty("KEYSTORE_PASSWORD") ?: ""
+        }
+    }
+
+    // 2. 应用签名配置到 buildTypes 中
+    buildTypes {
+        release {
+            // 开启代码混淆，生成更安全的 APK
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // 将签名配置应用到 release 类型中
+            signingConfig signingConfigs.release
+        }
+
+        debug {
+            signingConfig signingConfigs.debug  // 如果你希望在 debug 版本中使用相同的签名配置
+
+        }
     }
 
     defaultConfig {
@@ -44,13 +96,14 @@ android {
         versionName = flutterVersionName
     }
 
-    buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
-        }
-    }
+//    buildTypes {
+//        release {
+//            // TODO: Add your own signing config for the release build.
+//            // Signing with the debug keys for now, so `flutter run --release` works.
+//            signingConfig = signingConfigs.debug
+//        }
+//    }
+    buildToolsVersion '30.0.3'
 }
 
 flutter {
