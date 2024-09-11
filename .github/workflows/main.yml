@@ -80,13 +80,16 @@ jobs:
       # Set up environment variables for signing config
       - name: Set up environment, Create key.properties
         run: |
-          cat <<EOF > android/key.properties
+          cat <<EOF > android/app/key.properties
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           storeFile=keystore.jks
           EOF
-          
+
+      - name: Output android/app/key.properties file to log
+        run: cat android/app/key.properties   
+
       # Build Android APK
       - name: Build Android APK
         run: |
