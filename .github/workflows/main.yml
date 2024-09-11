@@ -81,10 +81,10 @@ jobs:
       - name: Set up environment, Create key.properties
         run: |
           cat <<EOF > android/app/key.properties
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=keystore.jks
+          KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+          KEYSTORE_PATH=keystore.jks
           EOF
 
       - name: Output android/app/key.properties file to log
