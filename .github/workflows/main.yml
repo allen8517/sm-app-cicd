@@ -1,5 +1,6 @@
 name: Flutter CI/CD
 # base64 -i PROVISIONING_PROFILE.mobileprovision | pbcopy
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on:
   # watch:
   #   types: started
@@ -23,10 +24,21 @@ jobs:
     if: github.event.repository.owner.id == github.event.sender.id
     timeout-minutes: 60
     steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+    
       # 检出代码
-      - name: Checkout repository
+      - name: Checkout repository code
         uses: actions/checkout@v4
-  
+      
+      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
+      - run: echo "🖥️ The workflow is now ready to test your code on the runner."
+      - name: List files in the repository
+        run: |
+          ls ${{ github.workspace }}
+      - run: echo "🍏 This job's status is ${{ job.status }}."
+
       # 设置java环境
       - name: Set up Java for Android build
         uses: actions/setup-java@v3
@@ -71,7 +83,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       
-
       # Decrypt the keystore from the GitHub secret and save it
       - name: Decode keystore
         run: |
@@ -80,15 +91,15 @@ jobs:
       # Set up environment variables for signing config
       - name: Set up environment, Create key.properties
         run: |
-          cat <<EOF > android/app/key.properties
+          cat <<EOF > android/key.properties
           KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
           KEYSTORE_PATH=keystore.jks
           EOF
 
-      - name: Output android/app/key.properties file to log
-        run: cat android/app/key.properties   
+      - name: Output android/key.properties file to log
+        run: cat android/key.properties   
 
       # Build Android APK
       - name: Build Android APK
