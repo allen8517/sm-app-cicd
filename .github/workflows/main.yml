@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'  # or '11'
+          java-version: '17'
       
       # 设置 Ruby 和 CocoaPods 环境
       - name: Set up Ruby
