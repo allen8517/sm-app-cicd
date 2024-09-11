@@ -74,7 +74,7 @@ jobs:
       # Build Android APK
       - name: Build Android APK
         run: |
-          echo $ENCODED_KEYSTORE | base64 -di > android/app/keystore.jks
+          echo $ENCODED_KEYSTORE | base64 --decode > android/app/keystore.jks
           flutter build apk --release
         env:
           ENCODED_KEYSTORE: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
