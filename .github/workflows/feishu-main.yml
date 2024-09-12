@@ -17,7 +17,6 @@ jobs:
       - name: Notify via Feishu
         if: always()
         run: |
-
           COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | jq -R .)
           echo $COMMIT_MESSAGE
           curl -X POST "$FEISHU_WEBHOOK_URL" \
