@@ -2,14 +2,14 @@ name: Flutter CI/CD
 # base64 -i PROVISIONING_PROFILE.mobileprovision | pbcopy
 # run-name: ${{ github.triggering_actor }} is testing out GitHub Actions 🚀
 on:
-  # watch:
-  #   types: started
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  watch:
+    types: started
+  # push:
+  #   branches:
+  #     - main
+  # pull_request:
+  #   branches:
+  #     - main
 
 env:
   METHOD: "release-testing"
