@@ -22,7 +22,7 @@ jobs:
             -d '{
             "msg_type": "text",
             "content": {
-              "text": "CI/CD Job Status:\nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nUrl: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nCommit: ${{ github.sha }}\nCommit Message: \\"${{ github.event.head_commit.message }}\\\nAuthor: ${{ github.actor }}\nPR Number: ${{ github.event.pull_request.number }}\nPR Title: ${{ github.event.pull_request.title }}\nPR Description: ${{ github.event.pull_request.body }}\nPR Commit SHA: ${{ github.event.pull_request.head.sha }}"
+              "text": "CI/CD Job Status:\nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nUrl: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nCommit: ${{ github.sha }}\nCommit Message: \\"${{ toJson(github.event.head_commit.message) }}\\\nAuthor: ${{ github.actor }}\nPR Number: ${{ github.event.pull_request.number }}\nPR Title: ${{ github.event.pull_request.title }}\nPR Description: ${{ github.event.pull_request.body }}\nPR Commit SHA: ${{ github.event.pull_request.head.sha }}"
             }
           }'
         env:
