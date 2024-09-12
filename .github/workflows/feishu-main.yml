@@ -20,8 +20,6 @@ jobs:
 
           COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | jq -R .)
           echo $COMMIT_MESSAGE
-          COMMIT_MESSAGE1=${{ replace(github.event.head_commit.message, '\n', ' ') }}
-          echo $COMMIT_MESSAGE1
           curl -X POST "$FEISHU_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d '{
