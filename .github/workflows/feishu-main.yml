@@ -10,8 +10,23 @@ on:
   #   branches:
   #     - main
 
-jobs:       
+jobs:
+  
+  e1:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test1"
+      - run: echo "test2"
+      
+  e2:
+    needs: e1
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test3"
+      - run: echo "test4"  
+      
   notify:
+    needs: [e1, e2]
     runs-on: ubuntu-latest
     steps:
       - name: Notify via Feishu
