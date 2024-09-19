@@ -190,21 +190,30 @@ jobs:
       - name: Clean DerivedData
         run: rm -rf ~/Library/Developer/Xcode/DerivedData
 
-      # 导入证书并解锁密钥链
-      - name: Install Apple Certificates
-        # 通过 env 传递 GitHub Secrets
-        env:
-          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-        run: |
-          echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-          security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
-          security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
-          security list-keychains -s ~/Library/Keychains/build.keychain
-          security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
+       # Set up Apple Certificate and Profile for signing
+      - name: Set up Signing Certificates and Provisioning Profiles
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          keychain: 'tempKeychina'
+          keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+          
+      # # 导入证书并解锁密钥链
+      # - name: Install Apple Certificates
+      #   # 通过 env 传递 GitHub Secrets
+      #   env:
+      #     IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
+      #     IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      #     IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      #   run: |
+      #     echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
+      #     echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+      #     security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
+      #     security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+      #     security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
+      #     security list-keychains -s ~/Library/Keychains/build.keychain
+      #     security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
       
       # 安装描述文件
       - name: Install Apple Provisioning Profile
@@ -256,15 +265,7 @@ jobs:
       - name: Build iOS App
         run: flutter build ios --release --no-codesign
 
-      # Set up Apple Certificate and Profile for signing
-      - name: Set up Signing Certificates and Provisioning Profiles
-        uses: apple-actions/import-codesign-certs@v3
-        with:
-          p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
-          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          provisioning-profile-base64: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-          keychain: 'tempKeychina'
-          keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+     
 
       # Archive the iOS app for deployment or further actions
       - name: Archive the iOS App
