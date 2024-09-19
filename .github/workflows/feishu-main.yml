@@ -19,7 +19,6 @@ jobs:
       - run: echo "test2"
       
   e2:
-    needs: e1
     runs-on: ubuntu-latest
     steps:
       - run: echo "test3"
