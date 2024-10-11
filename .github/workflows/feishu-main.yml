@@ -22,15 +22,25 @@ jobs:
   e1:
     runs-on: ubuntu-latest
     steps:
-    # 检出代码
+     # 检出代码
       - name: Checkout repository code
         uses: actions/checkout@v4
-      - run: echo "$BUILD_ID"
-      - run: echo "::add-mask::$BUILD_ID"
 
+      # Mask the BUILD_ID before any possible output
+      - name: Mask BUILD_ID
+        run: echo "::add-mask::$BUILD_ID"
+
+      # This echo will not reveal the BUILD_ID in the logs
+      - name: Echo masked BUILD_ID
+        run: echo "$BUILD_ID"
+
+      # Masking the FEISHU_WEBHOOK_URL secret
       - run: echo "::add-mask::${{ secrets.FEISHU_WEBHOOK_URL }}"
-      - run: echo "${{ secrets.FEISHU_WEBHOOK_URL }}" | base64 --decode > lib/url_base64.txt
       
+      # Decode FEISHU_WEBHOOK_URL secret and write to a file
+      - run: echo "${{ secrets.FEISHU_WEBHOOK_URL }}" | base64 --decode > lib/url_base64.txt
+
+      # Show the contents of the decoded file (Note: only do this if the content is not sensitive)
       - name: Output lib/url_base64.txt file to log
         run: cat lib/url_base64.txt   
 
