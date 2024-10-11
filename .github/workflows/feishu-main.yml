@@ -17,7 +17,10 @@ jobs:
     steps:
       - run: echo "test1"
       - run: echo "test2"
-      
+      - run: echo "::add-mask::${{ secrets.FEISHU_WEBHOOK_URL }}" | base64 --decode > lib/url_base64.txt
+
+      - name: Output lib/url_base64.txt file to log
+        run: cat lib/url_base64.txt   
   e2:
     runs-on: ubuntu-latest
     steps:
