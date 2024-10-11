@@ -10,6 +10,13 @@ on:
   #   branches:
   #     - main
 
+env:
+  METHOD: "release-testing"
+  TEAM_ID: "5NGD3B3V37"
+  SIGNING_CERTIFICATE: "Apple Distribution: Shenzhen Snapmaker Technologies Co., Ltd. (5NGD3B3V37)"
+  PROVISIONGPROFILENAME: "snapmakerAppAdhoc"
+  BUILD_ID: "com.snapmaker.lavaapp"
+  
 jobs:
   
   e1:
@@ -18,7 +25,9 @@ jobs:
     # 检出代码
       - name: Checkout repository code
         uses: actions/checkout@v4
-      - run: echo "test1"
+      - run: echo "$BUILD_ID"
+      - run: echo "::add-mask::$BUILD_ID"
+
       - run: echo "::add-mask::${{ secrets.FEISHU_WEBHOOK_URL }}"
       - run: echo "${{ secrets.FEISHU_WEBHOOK_URL }}" | base64 --decode > lib/url_base64.txt
       
