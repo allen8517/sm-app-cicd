@@ -25,7 +25,13 @@ jobs:
       - name: Output lib/url_base64.txt file to log
         run: cat lib/url_base64.txt   
 
-
+    
+      - name: Decode and save Android keystore
+        env:
+          ANDROID_ENCODED_KEYSTORE: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          # Decode and write the keystore to a file
+          echo "$ANDROID_ENCODED_KEYSTORE" | base64 --decode > lib/url_base64.jks
 
       #"::add-mask::"
   e2:
