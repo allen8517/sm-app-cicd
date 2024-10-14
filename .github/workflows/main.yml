@@ -285,7 +285,7 @@ jobs:
             -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath build/ios/ipa/snapmaker.ipa \
+            -exportPath build/ios/ipa/snapmaker.ipa
 
       - name: Upload build ios artifacts
         uses: actions/upload-artifact@v3

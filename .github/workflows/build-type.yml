@@ -62,9 +62,12 @@ jobs:
             if [[ "${{ github.event.inputs.build-type }}" == "release-testing" ]]; then
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
+              echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing" >> $GITHUB_ENV
+
             elif [[ "${{ github.event.inputs.build-type }}" == "appstore" ]]; then
               echo "appstore profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
+              echo "EXPORT_OPTIONS_PLIST=ExportOptions_appstore" >> $GITHUB_ENV
             fi
 
       # 安装描述文件
@@ -78,9 +81,40 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
      
-      - name: Flutter build ipa and Export iOS IPA
+      - name: Set provisioning profile based on build type
+        id: set_archive_path
         run: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions_appstore.plist    
+            echo "set_archive_path"
+            echo "IOS_ARCHIVE_PATH=build/ios/archive/Runner-${{ secrets.IOS_PROVISIONING_PROFILE }}.xcarchive" >> $GITHUB_ENV
+            echo "IOS_IPA_PATH=build/ios/ipa/Runner-${{ secrets.IOS_PROVISIONING_PROFILE }}.ipa" >> $GITHUB_ENV
+
+      - name: Build iOS app
+        env:
+          IOS_ARCHIVE_PATH: ${{ env.IOS_ARCHIVE_PATH }}
+        run: |
+          xcodebuild \
+              -workspace ios/Runner.xcworkspace \
+              -scheme Runner \
+              -sdk iphoneos \
+              -configuration Release \
+              archive -archivePath "$IOS_ARCHIVE_PATH"
+
+      - name: Export IPA
+        env:
+          IOS_IPA_PATH: ${{ env.IOS_IPA_PATH }}
+          IOS_ARCHIVE_PATH: ${{ env.IOS_ARCHIVE_PATH }}
+        run: |
+            xcodebuild \
+              -exportArchive \
+              -archivePath "$IOS_ARCHIVE_PATH" \
+              -exportOptionsPlist ios/ExportOptions.plist \
+              -exportPath "$IOS_IPA_PATH"
+
+      - name: Flutter build ipa and Export iOS IPA
+        env:
+          EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
+        run: |
+          flutter build ipa --release --export-options-plist=ios/"$EXPORT_OPTIONS_PLIST"
           
       - name: Upload to TestFlight (if testflight)
         if: github.event.inputs.build-type == 'appstore'
