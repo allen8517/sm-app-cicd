@@ -1,4 +1,4 @@
-name: Flutter CI/CD
+name: 'Upload app to TestFlight'
 # base64 -i PROVISIONING_PROFILE.mobileprovision | pbcopy
 # run-name: ${{ github.triggering_actor }} is testing out GitHub Actions 🚀
 on:
@@ -34,106 +34,6 @@ jobs:
           ls ${{ github.workspace }}
       - run: echo "🍏 This job's status is ${{ job.status }}."
   
-  android-build:
-    needs: common-build
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      # 检出代码
-      - name: Checkout repository code
-        uses: actions/checkout@v4
-      
-      # 设置java环境
-      - name: Set up Java for Android build
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      # 设置 Flutter 环境
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.22.3'
-    
-      # 在构建之前执行 flutter clean
-      - name: Flutter Clean
-        run: flutter clean
-
-      # flutter pub get
-      - name: Install dependencies
-        run: flutter pub get
-    
-      # # 运行 Flutter 分析 (可选，确保代码符合 Dart 规范)
-      # - name: Run Flutter analyze
-      #   run: flutter analyze
-
-      # 运行 Flutter 测试 (可选)
-      # - name: Run Flutter tests
-      #   run: flutter test
-
-      # Gradle 缓存 (Android)
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      
-      # Decrypt the keystore from the GitHub secret and save it
-      - name: Decode keystore
-        run: |
-         echo ${{ secrets.ANDROID_ENCODED_KEYSTORE }} | base64 --decode > android/app/keystore.jks
-
-      # Set up environment variables for signing config
-      - name: Set up environment, Create key.properties
-        run: |
-          cat <<EOF > android/key.properties
-          KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
-          KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
-          KEYSTORE_PATH=keystore.jks
-          EOF
-
-      - name: Output android/key.properties file to log
-        run: cat android/key.properties   
-
-      # Build Android APK
-      - name: Build Android APK
-        run: |
-          flutter build apk --release
-
-      # - name: Build Android APK (sign_app)
-      #   uses: r0adkll/sign-android-release@v1
-      #   id: sign_app #sign_aab
-      #   with:
-      #     releaseDirectory: build/outputs/apk/release
-      #     signingKeyBase64: ${{ secrets.ANDROID_ENCODED_KEYSTORE }}
-      #     alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-      #     keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      #     keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      #   env:
-      #     # override default build-tools version (33.0.0) -- optional
-      #     BUILD_TOOLS_VERSION: "34.0.0"
-
-      # # 构建 Android AAB (可选，适用于 Google Play)
-      # - name: Build App Bundle
-      #   run: flutter build appbundle --release
-
-      # Archive android APK
-      - name: Archive android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk    
-      # # 或者上传 AAB 文件
-      # - name: Upload AAB
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: android-aab
-      #     path: build/app/outputs/bundle/release/app-release.aab
-
   ios-build:
     needs: common-build
     runs-on: macos-latest
@@ -198,23 +98,7 @@ jobs:
           p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           keychain: 'tempKeychina'
           keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-          
-      # # 导入证书并解锁密钥链
-      # - name: Install Apple Certificates
-      #   # 通过 env 传递 GitHub Secrets
-      #   env:
-      #     IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-      #     IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      #     IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-      #   run: |
-      #     echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-      #     echo "$IOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
-      #     security create-keychain -p "$IOS_KEYCHAIN_PASSWORD" build.keychain
-      #     security import /tmp/certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-      #     security set-keychain-settings -t 3600 -l ~/Library/Keychains/build.keychain
-      #     security list-keychains -s ~/Library/Keychains/build.keychain
-      #     security unlock-keychain -p "$IOS_CERTIFICATE_PASSWORD" ~/Library/Keychains/build.keychain
-      
+
       # 安装描述文件
       - name: Install Apple Provisioning Profile
         # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件
@@ -292,58 +176,23 @@ jobs:
         with:
           name: ios-ipa
           path: build/ios/ipa/snapmaker.ipa
-      # flutter build ipa  --export-method: ad-hoc, development, enterprise
-      # - name: Flutter build ipa and Export iOS IPA
-      #   run: |
-      #     flutter build ipa --release --export-options-plist=ios/ExportOptions-signingCertificate.plist            
+      # flutter build ipa  --export-method: ad-hoc, development, enterprise  ExportOptions  -signingCertificate
+      - name: Flutter build ipa and Export iOS IPA
+        run: |
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist            
     
+    - name: 'Upload app to TestFlight'
+          uses: apple-actions/upload-testflight-build@v1
+          with: 
+            app-path: 'path/to/application.ipa' 
+            issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+            api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+            api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+            
       # Ensure this step only runs after the build process to avoid deleting necessary certificates too early
       # - name: Delete certificates
       #   run: |
       #     rm -f /tmp/certificate.p12
       #     rm -f /tmp/profile.mobileprovision
   
-  # 这些任务在 build 成功后运行，分别将 Android 和 iOS 的构建结果（APK 和 .xcarchive）上传为 GitHub Artifacts
-  android-deploy:
-    runs-on: ubuntu-latest
-    needs: android-build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: android-deploy
-        run: echo android-deploy
-      # - name: Upload Android APK to GitHub
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: app-release.apk
-      #     path: build/app/outputs/flutter-apk/app-release.apk
-
-  ios-deploy:
-    runs-on: macos-latest
-    needs: ios-build
-    if: github.ref == 'refs/heads/main'
-    steps:
-      # Upload the dSYM file (Symbols for debugging)
-      - name: Upload dSYM
-        uses: actions/upload-artifact@v3
-        with:
-          name: ios-dsym
-          path: build/ios/archive/Runner.xcarchive/dSYMs/
-
-  notify:
-    runs-on: ubuntu-latest
-    needs: [android-deploy, ios-deploy]  # 依赖于 android-deploy 和 ios-deploy 的执行结果
-    steps:
-      # always() / success() || failure() 不论前面的 job 成功或失败都会执行  $GITHUB_REPOSITORY $GITHUB_RUN_ID
-      - name: Notify via Feishu
-        if: success() || failure()
-        run: |
-          curl -X POST "$FEISHU_WEBHOOK_URL" \
-            -H 'Content-Type: application/json' \
-            -d '{
-            "msg_type": "text",
-            "content": {
-              "text": "CI/CD Job Status: \nAndroid Job: ${{ needs.android-deploy.result }} \niOS Job: ${{ needs.ios-deploy.result }}\nUrl: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nCommit: ${{ github.sha }}\nCommit Message:: ${{ github.event.head_commit.message }}\nAuthor: ${{ github.actor }}\nPR Number: ${{ github.event.pull_request.number }}\nPR Title: ${{ github.event.pull_request.title }}\nPR Description: ${{ github.event.pull_request.body }}PR Commit SHA: ${{ github.event.pull_request.head.sha }}\n"
-              }
-            }'
-        env:
-          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+  
