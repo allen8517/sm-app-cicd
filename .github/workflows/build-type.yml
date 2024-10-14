@@ -119,8 +119,10 @@ jobs:
       - name: Upload to TestFlight (if testflight)
         if: github.event.inputs.build-type == 'appstore'
         uses: apple-actions/upload-testflight-build@v1
+        env:
+          IOS_IPA_PATH: ${{ env.IOS_IPA_PATH }}
         with:
-          app-path: build/ios/smapp.ipa
+          app-path: "$IOS_IPA_PATH"
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
