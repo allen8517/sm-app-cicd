@@ -174,17 +174,17 @@ jobs:
       - name: Upload build ios artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ios-ipa
-          path: build/ios/ipa/snapmaker.ipa
+            name: ios-ipa
+            path: build/ios/ipa/snapmaker.ipa
       # flutter build ipa  --export-method: ad-hoc, development, enterprise  ExportOptions  -signingCertificate
       - name: Flutter build ipa and Export iOS IPA
         run: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist            
+            flutter build ipa --release --export-options-plist=ios/ExportOptions.plist            
     
-    - name: 'Upload app to TestFlight'
-          uses: apple-actions/upload-testflight-build@v1
-          with: 
-            app-path: 'path/to/application.ipa' 
+      - name: 'Upload app to TestFlight'
+        uses: apple-actions/upload-testflight-build@v1
+        with: 
+            app-path: 'build/ios/ipa/snapmaker.ipa' 
             issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
             api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
             api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
