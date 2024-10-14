@@ -1,0 +1,78 @@
+name: Build and Upload iOS App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build-type:
+        description: 'Type of build to run (release-testing, appstore)'
+        required: true
+        default: 'release-testing'
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 设置 Flutter 环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.3'
+    
+      # 在构建之前执行 flutter clean
+      - name: Flutter Clean
+        run: flutter clean
+
+      # flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
+
+    
+      - name: Install Pods
+        run: pod install --no-repo-update
+        working-directory: ios
+          
+      - name: Set up build type
+        run: |
+            echo "Build type is: ${{ github.event.inputs.build-type }}"
+
+      # Set up Apple Certificate and Profile for signing
+      - name: Set up Signing Certificates and Provisioning Profiles
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          keychain: 'tempKeychina'
+          keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+
+    
+      # 安装描述文件
+      - name: Install Apple Provisioning Profile
+        # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件  IOS_PROVISIONING_PROFILE_APPSTORE   IOS_PROVISIONING_PROFILE
+        env:
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}
+        run: |
+          echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/snapmakerAppAppstore.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp /tmp/snapmakerAppAppstore.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+     
+      - name: Flutter build ipa and Export iOS IPA
+        run: |
+          flutter build ipa --release --export-options-plist=ios/ExportOptions_appstore.plist    
+          
+      - name: Upload to TestFlight (if testflight)
+        if: github.event.inputs.build-type == 'testflight'
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: build//runner.ipa
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      
