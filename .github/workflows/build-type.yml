@@ -71,12 +71,12 @@ jobs:
       - name: Install Apple Provisioning Profile
         # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件  IOS_PROVISIONING_PROFILE_APPSTORE   IOS_PROVISIONING_PROFILE
         env:
-          IOS_PROVISIONING_PROFILE: ${{ env.IOS_PROVISIONING_PROFILE_APPSTORE }}
+          IOS_PROVISIONING_PROFILE: ${{ env.IOS_PROVISIONING_PROFILE }}
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/snapmakerApp.mobileprovision
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/profile.mobileprovision
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/snapmakerApp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp /tmp/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
      
       - name: Flutter build ipa and Export iOS IPA
         run: |
