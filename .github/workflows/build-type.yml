@@ -10,6 +10,10 @@ on:
         description: 'Type of build to run (release-testing, appstore)'
         required: true
         default: 'release-testing'
+        type: choice
+        options:
+          - release-testing
+          - appstore
 
 jobs:
   build-ios:
@@ -52,16 +56,27 @@ jobs:
           keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
 
     
+      - name: Set provisioning profile based on build type
+        id: set_profile
+        run: |
+            if [[ "${{ github.event.inputs.build-type }}" == "release-testing" ]]; then
+              echo "release-testing profile selected"
+              echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
+            elif [[ "${{ github.event.inputs.build-type }}" == "appstore" ]]; then
+              echo "appstore profile selected"
+              echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
+            fi
+
       # 安装描述文件
       - name: Install Apple Provisioning Profile
         # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/appstore文件  IOS_PROVISIONING_PROFILE_APPSTORE   IOS_PROVISIONING_PROFILE
         env:
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}
+          IOS_PROVISIONING_PROFILE: ${{ env.IOS_PROVISIONING_PROFILE_APPSTORE }}
         run: |
           echo "*****Decoding IOS_CERTIFICATE and setting up keychain"
-          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/snapmakerAppAppstore.mobileprovision
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/snapmakerApp.mobileprovision
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp /tmp/snapmakerAppAppstore.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp /tmp/snapmakerApp.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
      
       - name: Flutter build ipa and Export iOS IPA
         run: |
