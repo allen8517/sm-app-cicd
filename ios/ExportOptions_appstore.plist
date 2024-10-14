@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>destination</key>
-	<string>upload</string>
+	<string>export</string>
 	<key>manageAppVersionAndBuildNumber</key>
 	<false/>
 	<key>generateAppStoreInformation</key>
@@ -16,7 +16,7 @@
 		<string>snapmakerAppAppstore</string>
 	</dict>
 	<key>signingCertificate</key>
-	<string>552C36BE653748FB5052C24C849A572A6D263F5D</string>
+	<string>Apple Distribution: Shenzhen Snapmaker Technologies Co., Ltd. (5NGD3B3V37)</string>
 	<key>signingStyle</key>
 	<string>manual</string>
 	<key>stripSwiftSymbols</key>
