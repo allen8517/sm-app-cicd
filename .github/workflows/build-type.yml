@@ -9,12 +9,11 @@ on:
       build-type:
         description: 'Type of build to run (release-testing, appstore)'
         required: true
-        default: 'release-testing'
         type: choice
         options:
           - release-testing
           - appstore
-
+        default: 'release-testing'
 jobs:
   build-ios:
     runs-on: macos-latest
@@ -42,9 +41,15 @@ jobs:
         run: pod install --no-repo-update
         working-directory: ios
           
+
+      - name: Set default build type if not provided
+        run: |
+          echo "BUILD_TYPE=${{ github.event.inputs.build-type || 'release-testing' }}" >> $GITHUB_ENV
+  
+
       - name: Set up build type
         run: |
-            echo "Build type is: ${{ github.event.inputs.build-type }}"
+            echo "BUILD_TYPE is: ${{ env.BUILD_TYPE }}"
 
       # Set up Apple Certificate and Profile for signing
       - name: Set up Signing Certificates and Provisioning Profiles
@@ -55,19 +60,22 @@ jobs:
           keychain: 'tempKeychina'
           keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
 
+
     
       - name: Set provisioning profile based on build type
         id: set_profile
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
         run: |
-            echo build-type="${{ github.event.inputs.build-type }}"
-            if [[ "${{ github.event.inputs.build-type }}" == "release-testing" ]]; then
+            echo BUILD_TYPE="$BUILD_TYPE"
+            if [[ ${{ env.BUILD_TYPE }} == "release-testing" ]]; then
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing.plist" >> $GITHUB_ENV
               echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
               echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
               echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAdhoc" >> $GITHUB_ENV
-            elif [[ "${{ github.event.inputs.build-type }}" == "appstore" ]]; then
+            elif [[ ${{ env.BUILD_TYPE }} == "appstore" ]]; then
               echo "appstore profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_appstore.plist" >> $GITHUB_ENV
