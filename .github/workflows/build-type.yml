@@ -59,6 +59,7 @@ jobs:
       - name: Set provisioning profile based on build type
         id: set_profile
         run: |
+            echo build-type="${{ github.event.inputs.build-type }}"
             if [[ "${{ github.event.inputs.build-type }}" == "release-testing" ]]; then
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
