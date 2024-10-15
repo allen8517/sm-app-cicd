@@ -182,7 +182,7 @@ jobs:
         if: env.BUILD_TYPE == 'appstore'
         uses: apple-actions/upload-testflight-build@v1
         with:
-          app-path: ${{ env.IOS_IPA_PATH }}/*.ipa
+          app-path: ${{ env.IOS_IPA_PATH }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
