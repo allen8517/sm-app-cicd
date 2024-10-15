@@ -143,6 +143,13 @@ jobs:
       - name: Debug environment variables
         run: echo "IOS_IPA_PATH is ${{ env.IOS_IPA_PATH }}"
 
+      - name: Set up App Store Connect API key
+        if: env.BUILD_TYPE == 'appstore'
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APPSTORE_API_PRIVATE_KEY }}" > ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
+          chmod 600 ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
+      
       - name: Upload to TestFlight (if testflight)
         if: env.BUILD_TYPE == 'appstore'
         uses: apple-actions/upload-testflight-build@v1
