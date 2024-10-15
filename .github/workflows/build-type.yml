@@ -146,6 +146,8 @@ jobs:
       - name: Set up App Store Connect API key
         if: env.BUILD_TYPE == 'appstore'
         run: |
+          echo "API Key ID: ${{ secrets.APPSTORE_API_KEY_ID }}"
+          echo "API Issuer ID: ${{ secrets.APPSTORE_ISSUER_ID }}"
           mkdir -p ~/private_keys
           echo "${{ secrets.APPSTORE_API_PRIVATE_KEY }}" > ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
           chmod 600 ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
