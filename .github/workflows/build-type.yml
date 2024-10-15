@@ -96,6 +96,7 @@ jobs:
             echo "IOS_IPA_PATH=build/ios/ipa/Runner-"$IOS_MOBILE_PROVISION_NAME.ipa"" >> $GITHUB_ENV
             echo "${{env.IOS_ARCHIVE_PATH}},  ${{env.IOS_IPA_PATH}}"
             echo "project/$IOS_ARCHIVE_PATH,  $env.IOS_IPA_PATH"
+            echo "project/${{env.IOS_ARCHIVE_PATH}},  ${{env.IOS_IPA_PATH}}"
 
       - name: Build iOS app
         env:
