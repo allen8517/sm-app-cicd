@@ -63,11 +63,12 @@ jobs:
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing" >> $GITHUB_ENV
-
+              echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
             elif [[ "${{ github.event.inputs.build-type }}" == "appstore" ]]; then
               echo "appstore profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_appstore" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Release" >> $GITHUB_ENV
             fi
 
       # 安装描述文件
@@ -91,12 +92,13 @@ jobs:
       - name: Build iOS app
         env:
           IOS_ARCHIVE_PATH: ${{ env.IOS_ARCHIVE_PATH }}
+          BUILD_CONFIGURATION: ${{ env.BUILD_CONFIGURATION }}
         run: |
           xcodebuild \
               -workspace ios/Runner.xcworkspace \
               -scheme Runner \
               -sdk iphoneos \
-              -configuration Release \
+              -configuration "$BUILD_CONFIGURATION" \
               archive -archivePath "$IOS_ARCHIVE_PATH"
 
       - name: Export IPA
@@ -110,11 +112,11 @@ jobs:
               -exportOptionsPlist ios/ExportOptions.plist \
               -exportPath "$IOS_IPA_PATH"
 
-      - name: Flutter build ipa and Export iOS IPA
-        env:
-          EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
-        run: |
-          flutter build ipa --release --export-options-plist=ios/"$EXPORT_OPTIONS_PLIST"
+      # - name: Flutter build ipa and Export iOS IPA
+      #   env:
+      #     EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
+      #   run: |
+      #     flutter build ipa --release --export-options-plist=ios/"$EXPORT_OPTIONS_PLIST"
           
       - name: Upload to TestFlight (if testflight)
         if: github.event.inputs.build-type == 'appstore'
