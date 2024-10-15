@@ -61,19 +61,19 @@ jobs:
           p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
           keychain: 'tempKeychina'
           keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-
+      
+      # 使用$BUILD_TYPE 或者 ${{ env.BUILD_TYPE }} 都可以
       - name: Set provisioning profile based on build type
         id: set_profile
         run: |
-            echo BUILD_TYPE=${{ env.BUILD_TYPE }}
             echo "BUILD_TYPE=$BUILD_TYPE"
-            if [[ ${{ env.BUILD_TYPE }} == "release-testing" ]]; then
+            if [[ "$BUILD_TYPE" == "release-testing" ]]; then
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing.plist" >> $GITHUB_ENV
               echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAdhoc" >> $GITHUB_ENV
               echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
-            elif [[ ${{ env.BUILD_TYPE }} == "appstore" ]]; then
+            elif [[ "$BUILD_TYPE" == "appstore" ]]; then
               echo "appstore profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_appstore.plist" >> $GITHUB_ENV
@@ -138,14 +138,16 @@ jobs:
       #     EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
       #   run: |
       #     flutter build ipa --release --export-options-plist=ios/"$EXPORT_OPTIONS_PLIST"
-          
+      #     flutter build ipa --profile --export-options-plist=ios/"$EXPORT_OPTIONS_PLIST"
+      
+      - name: Debug environment variables
+        run: echo "IOS_IPA_PATH is ${{ env.IOS_IPA_PATH }}"
+
       - name: Upload to TestFlight (if testflight)
-        if: github.event.inputs.build-type == 'appstore'
+        if: env.BUILD_TYPE == 'appstore'
         uses: apple-actions/upload-testflight-build@v1
-        env:
-          IOS_IPA_PATH: ${{ env.IOS_IPA_PATH }}
         with:
-          app-path: "$IOS_IPA_PATH"
+          app-path: ${{ env.IOS_IPA_PATH }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
