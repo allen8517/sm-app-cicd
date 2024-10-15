@@ -14,6 +14,14 @@ on:
           - release-testing
           - appstore
         default: 'release-testing'
+      build-language:
+        description: 'i18n (en, cn)'
+        required: true
+        type: choice
+        options:
+          - en
+          - cn
+        default: 'en'
 jobs:
   build-ios:
     runs-on: macos-latest
