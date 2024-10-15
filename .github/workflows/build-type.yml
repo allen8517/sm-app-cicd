@@ -45,12 +45,14 @@ jobs:
       - name: Set default build type if not provided
         run: |
           echo "BUILD_TYPE=${{ github.event.inputs.build-type || 'release-testing' }}" >> $GITHUB_ENV
+      # - run: 
+      #     if [[ -z "${{ github.event.inputs.build-type }}" ]]; then
+      #       echo "BUILD_TYPE=release-testing" >> $GITHUB_ENV
+      #     else
+      #       echo "BUILD_TYPE=${{ github.event.inputs.build-type }}" >> $GITHUB_ENV
+      #     fi
+
   
-
-      - name: Set up build type
-        run: |
-            echo "BUILD_TYPE is: ${{ env.BUILD_TYPE }}"
-
       # Set up Apple Certificate and Profile for signing
       - name: Set up Signing Certificates and Provisioning Profiles
         uses: apple-actions/import-codesign-certs@v3
@@ -60,26 +62,26 @@ jobs:
           keychain: 'tempKeychina'
           keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
 
-
-    
       - name: Set provisioning profile based on build type
         id: set_profile
-        env:
-          BUILD_TYPE: ${{ env.BUILD_TYPE }}
         run: |
-            echo BUILD_TYPE="$BUILD_TYPE"
+            echo BUILD_TYPE=${{ env.BUILD_TYPE }}
+            echo "BUILD_TYPE=$BUILD_TYPE"
             if [[ ${{ env.BUILD_TYPE }} == "release-testing" ]]; then
               echo "release-testing profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing.plist" >> $GITHUB_ENV
-              echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
-              echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
               echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAdhoc" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
             elif [[ ${{ env.BUILD_TYPE }} == "appstore" ]]; then
               echo "appstore profile selected"
               echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
               echo "EXPORT_OPTIONS_PLIST=ExportOptions_appstore.plist" >> $GITHUB_ENV
               echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAppstore" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Release" >> $GITHUB_ENV
+            else
+              echo "Error: Unknown BUILD_TYPE '$BUILD_TYPE'"
+              exit 1
             fi
 
       # 安装描述文件
@@ -99,12 +101,12 @@ jobs:
         env: 
           IOS_MOBILE_PROVISION_NAME:  ${{ env.IOS_MOBILE_PROVISION_NAME }}
         run: |
+            TIMESTAMP=$(date +'%Y%m%d%H%M%S')
             echo "set IOS_ARCHIVE_PATH IOS_IPA_PATH"
-            echo "IOS_ARCHIVE_PATH=build/ios/archive/Runner-"$IOS_MOBILE_PROVISION_NAME".xcarchive" >> $GITHUB_ENV
-            echo "IOS_IPA_PATH=build/ios/ipa/Runner-"$IOS_MOBILE_PROVISION_NAME.ipa"" >> $GITHUB_ENV
-            echo "${{env.IOS_ARCHIVE_PATH}},  ${{env.IOS_IPA_PATH}}"
-            echo "project/$IOS_ARCHIVE_PATH,  $env.IOS_IPA_PATH"
-            echo "project/${{env.IOS_ARCHIVE_PATH}},  ${{env.IOS_IPA_PATH}}"
+            echo "IOS_MOBILE_PROVISION_NAME=$IOS_MOBILE_PROVISION_NAME"
+            echo "TIMESTAMP=$TIMESTAMP"
+            echo "IOS_ARCHIVE_PATH=build/ios/archive/Runner-$IOS_MOBILE_PROVISION_NAME-$TIMESTAMP.xcarchive" >> $GITHUB_ENV
+            echo "IOS_IPA_PATH=build/ios/ipa/Runner-$IOS_MOBILE_PROVISION_NAME-$TIMESTAMP.ipa" >> $GITHUB_ENV
 
       - name: Build iOS app
         env:
@@ -124,11 +126,12 @@ jobs:
           IOS_ARCHIVE_PATH: ${{ env.IOS_ARCHIVE_PATH }}
           EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
         run: |
+            echo "archivePath=$IOS_ARCHIVE_PATH, exportPath=$IOS_IPA_PATH, exportOptionsPlist=ios/$EXPORT_OPTIONS_PLIST"
             xcodebuild \
               -exportArchive \
-              -archivePath "$IOS_ARCHIVE_PATH" \
-              -exportOptionsPlist ios/"$EXPORT_OPTIONS_PLIST" \
-              -exportPath "$IOS_IPA_PATH"
+              -archivePath $IOS_ARCHIVE_PATH \
+              -exportOptionsPlist ios/$EXPORT_OPTIONS_PLIST \
+              -exportPath $IOS_IPA_PATH
 
       # - name: Flutter build ipa and Export iOS IPA
       #   env:
