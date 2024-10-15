@@ -150,12 +150,17 @@ jobs:
           echo "${{ secrets.APPSTORE_API_PRIVATE_KEY }}" > ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
           chmod 600 ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
       
-      - name: Upload to TestFlight (if testflight)
+      - name: Upload to App Store
         if: env.BUILD_TYPE == 'appstore'
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ env.IOS_IPA_PATH }}
-          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
-          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          xcrun altool --upload-app -f ${{ env.IOS_IPA_PATH }} --apiKey ${{ secrets.APPSTORE_API_KEY_ID }} --issuer ${{ secrets.APPSTORE_ISSUER_ID }} --verbose
+
+      # - name: Upload to TestFlight (if testflight)
+      #   if: env.BUILD_TYPE == 'appstore'
+      #   uses: apple-actions/upload-testflight-build@v1
+      #   with:
+      #     app-path: ${{ env.IOS_IPA_PATH }}
+      #     issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+      #     api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+      #     api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
       
