@@ -1,0 +1,657 @@
+name: Build Android/iOS/Orca App 1101
+
+on:
+  push:
+    branches:
+      - 'main'
+
+#   pull_request:
+#     branches:
+#       - '*'
+
+  workflow_dispatch:
+    inputs:
+      build-mode:
+        description: 'build-mode of build to run (profile | release-testing | release ), profile 支持抓包和切换环境, release-testing 支持上传到TestFlight, release 支持上传到App Store, 【 release-testing 只有iOS才有，Android和Orca没有release-testing模式 】'
+        required: true
+        type: choice
+        options:
+          - profile
+          - release-testing
+          - release
+        default: 'profile'
+    
+      build-env:
+        description: 'build-env of build to run (prod, staging, dev)'
+        required: true
+        type: choice
+        options:
+          - prod
+          - pre
+          - staging
+          - dev
+        default: 'prod'
+
+      build-language:
+        description: 'i18n (en-US, zh-CN)'
+        required: true
+        type: choice
+        options:
+          - en-US
+          - zh-CN
+        default: 'en-US'
+
+      build-platform:
+        description: 'Platform (android&ios&orca, android&ios, android, ios, orca)'
+        required: true
+        type: choice
+        options:
+          - android&ios&orca
+          - android&ios
+          - android
+          - ios
+          - orca
+        default: 'android&ios&orca'
+jobs:
+  ios-build:
+    name: iOS 构建
+    if: ${{ contains(github.event.inputs.build-platform, 'ios') }}
+    runs-on: macos-latest
+    steps:
+
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # 设置 Flutter 环境
+      - name: 设置 Flutter 环境
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+    
+      # 在构建之前执行 flutter clean
+      - name: Flutter 清理
+        run: flutter clean
+
+      - name: Flutter 版本
+        run: flutter --version
+
+      # flutter pub upgrade / flutter pub get
+      - name: 安装依赖
+        run: |
+          flutter pub upgrade
+          flutter pub get
+      
+      - name: 设置默认构建类型
+        run: |
+          # 设置构建模式，如果输入为 release-testing 则使用 release，否则使用输入值或默认值
+          BUILD_MODE_INPUT="${{ github.event.inputs.build-mode || 'release' }}"
+          echo "BUILD_MODE_INPUT=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+          if [[ "$BUILD_MODE_INPUT" == "release-testing" ]]; then
+            echo "BUILD_MODE=release" >> $GITHUB_ENV
+          else
+            echo "BUILD_MODE=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+            # 其他配置在后续步骤中设置
+          fi
+              
+      - name: 设置默认构建语言
+        run: |
+            echo "BUILD_LOCALE=${{ github.event.inputs.build-language || 'en-US' }}" >> $GITHUB_ENV
+      
+      - name: 设置默认构建环境
+        run: |
+            echo "BUILD_ENV=${{ github.event.inputs.build-env || 'prod' }}" >> $GITHUB_ENV
+   
+      - name: 获取环境变量
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}
+        run: |
+          echo "BUILD_MODE=$BUILD_MODE, BUILD_MODE_INPUT=$BUILD_MODE_INPUT, BUILD_ENV=$BUILD_ENV, BUILD_LOCALE=$BUILD_LOCALE"
+
+      # Set up Apple Certificate and Profile for signing
+      - name: 设置签名证书和配置文件
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          keychain: 'signing_temp'
+          keychain-password: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+      
+      - name: 根据构建类型设置配置文件
+        id: set_profile
+        env:
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+        run: |
+            echo "BUILD_MODE_INPUT=${{ env.BUILD_MODE_INPUT }}, BUILD_MODE=${{ env.BUILD_MODE }}"
+            if  [[ "$BUILD_MODE_INPUT" == "profile" ]]; then
+              echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
+              echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing.plist" >> $GITHUB_ENV
+              echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAdhoc" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Profile" >> $GITHUB_ENV
+            elif [[ "$BUILD_MODE_INPUT" == "release-testing" ]]; then
+              echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE }}" >> $GITHUB_ENV
+              echo "EXPORT_OPTIONS_PLIST=ExportOptions_release_testing.plist" >> $GITHUB_ENV
+              echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAdhoc" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Release" >> $GITHUB_ENV
+            elif [[ "$BUILD_MODE_INPUT" == "release" ]]; then
+              echo "IOS_PROVISIONING_PROFILE=${{ secrets.IOS_PROVISIONING_PROFILE_APPSTORE }}" >> $GITHUB_ENV
+              echo "EXPORT_OPTIONS_PLIST=ExportOptions_release.plist" >> $GITHUB_ENV
+              echo "IOS_MOBILE_PROVISION_NAME=snapmakerAppAppstore" >> $GITHUB_ENV
+              echo "BUILD_CONFIGURATION=Release" >> $GITHUB_ENV
+            else
+              echo "BUILD_MODE_INPUT is not profile, release-testing, release, debug"
+              echo "BUILD_MODE_INPUT=$BUILD_MODE_INPUT is not valid"
+              exit 1
+            fi
+
+      # 安装描述文件
+      - name: 安装 Apple 配置文件
+        # 通过 env 传递 GitHub Secrets IOS_PROVISIONING_PROFILE使用adhoc/release文件  IOS_PROVISIONING_PROFILE_APPSTORE   IOS_PROVISIONING_PROFILE
+        env:
+          IOS_PROVISIONING_PROFILE: ${{ env.IOS_PROVISIONING_PROFILE }}
+          IOS_MOBILE_PROVISION_NAME:  ${{ env.IOS_MOBILE_PROVISION_NAME }}
+        run: |
+          echo "*****Decoding $IOS_MOBILE_PROVISION_NAMETE Apple Provisioning Profile"
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > /tmp/$IOS_MOBILE_PROVISION_NAME.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp /tmp/$IOS_MOBILE_PROVISION_NAME.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+     
+      # 检查证书是否有效
+      - name: 检查 Apple 证书
+        run: |
+          echo "🔍 检查有效的代码签名证书..."
+          CERT_COUNT=$(security find-identity -v -p codesigning | grep -c "valid identities found")
+          if [ "$CERT_COUNT" -eq 0 ]; then
+            echo "❌ 未找到有效的代码签名证书"
+            exit 1
+          else
+            echo "✅ 找到 $CERT_COUNT 个有效的代码签名证书"
+          fi
+
+          
+      - name: 安装 Pods
+        # run: pod install --no-repo-update
+        run: |
+          echo "Clean Pods"
+          rm -rf Podfile.lock Pods .symlinks
+          echo "Update pod repo"
+          pod repo update
+          echo "Install Pods"
+          pod install
+        working-directory: ios
+          
+
+      - name: Flutter 构建 IPA 并导出 iOS IPA
+        run: |
+          echo "flutter build ipa --$BUILD_MODE --export-options-plist=ios/$EXPORT_OPTIONS_PLIST --dart-define=env=$BUILD_ENV--dart-define=locale=$BUILD_LOCALE"
+          flutter build ipa --$BUILD_MODE --export-options-plist=ios/$EXPORT_OPTIONS_PLIST --dart-define=env=$BUILD_ENV--dart-define=locale=$BUILD_LOCALE
+          # 遍历./build/ios/archive
+          ls -l ./build/ios/archive
+          echo "ARCHIVE_PATH=./build/ios/archive" >> $GITHUB_ENV
+          echo "IOS_IPA_PATH=./build/ios/ipa/Snapmaker.ipa" >> $GITHUB_ENV
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}
+          EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
+    
+      # # 输出dSYMs.zip文件
+      # - name: Export dSYMs.zip
+      #   if: ${{ env.BUILD_MODE != 'release' }}
+      #   env:
+      #     BUILD_MODE: ${{ env.BUILD_MODE }}
+      #     ARCHIVE_PATH: ${{ env.ARCHIVE_PATH }}
+      #   run: |
+      #     DSYMS_ZIP_PATH="${{ github.workspace }}/build/ios/archive/dSYMs.zip"
+      #     echo "DSYMS_ZIP_PATH=$DSYMS_ZIP_PATH" >> $GITHUB_ENV
+      #     cd ./build/ios/archive
+      #     zip -r $DSYMS_ZIP_PATH dSYMs
+          
+      # # 输出dSYMs.zip文件
+      # - name: Upload dSYMs.zip to github
+      #   if: ${{ env.BUILD_MODE != 'release' }}
+      #   env: 
+      #     BUILD_MODE: ${{ env.BUILD_MODE }}
+      #     DSYMS_ZIP_PATH: ${{ env.DSYMS_ZIP_PATH }}
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: dSYMs-from-xcarchive
+      #     path: "${{ env.DSYMS_ZIP_PATH }}"
+
+      - name: 上传 iOS 构建产物
+        uses: actions/upload-artifact@v4
+        env: 
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}
+          EXPORT_OPTIONS_PLIST: ${{ env.EXPORT_OPTIONS_PLIST }}
+          IOS_PROVISIONING_PROFILE: ${{ env.IOS_PROVISIONING_PROFILE }}
+          IOS_MOBILE_PROVISION_NAME:  ${{ env.IOS_MOBILE_PROVISION_NAME }}
+          IOS_IPA_PATH: ${{ env.IOS_IPA_PATH }}
+        with:
+          name: iOS-${{ env.BUILD_MODE }}-${{ env.BUILD_ENV }}-${{ env.BUILD_LOCALE }}-ipa
+          path: ${{ env.IOS_IPA_PATH }}
+          #path: ./build/ios/ipa/Snapmaker.ipa
+      
+      # security delete-keychain signing_temp.keychain-db
+      - name: 清理密钥链和配置文件
+        if: ${{ always() }}
+        env:
+            IOS_MOBILE_PROVISION_NAME:  ${{ env.IOS_MOBILE_PROVISION_NAME }}
+        run: |
+          rm ~/Library/MobileDevice/Provisioning\ Profiles/$IOS_MOBILE_PROVISION_NAME.mobileprovision
+          security delete-keychain signing_temp.keychain-db
+
+      # 从.xcarchive文件中将dSYMs文件夹复制到dSYMs.zip
+      - name: 上传 dSYMs.zip 到 Firebase
+        if: ${{ env.BUILD_MODE == 'release' }}
+        run: |
+          # 判断ARCHIVE_PATH文件是否存在
+          if [ -f $ARCHIVE_PATH ]; then
+            chmod +x "${PROJECT_DIR}/ios/upload-symbols.sh"
+            bash "${PROJECT_DIR}/ios/upload-symbols.sh"
+          else
+            echo "ARCHIVE_PATH file does not exist"
+          fi
+        env:
+          PROJECT_DIR: ${{ github.workspace }}
+          UPLOAD_FIREBASE_DSYM: true
+          ARCHIVE_PATH: ${{ env.ARCHIVE_PATH }}
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+
+      
+      - name: 设置 App Store Connect API 密钥
+        if: ${{ env.BUILD_MODE_INPUT == 'release '}}
+        env: 
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+        run: |
+          echo "API Key ID: ${{ secrets.APPSTORE_API_KEY_ID }}"
+          echo "API Issuer ID: ${{ secrets.APPSTORE_ISSUER_ID }}"
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APPSTORE_API_PRIVATE_KEY }}" > ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
+          chmod 600 ~/private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY_ID }}.p8
+      
+      # - name: Upload to App Store
+      #   if: env.BUILD_MODE_INPUT == 'release'
+      #   run: |
+      #     xcrun altool --upload-app -f ${{ env.IOS_IPA_PATH }} -type ios --apiKey ${{ secrets.APPSTORE_API_KEY_ID }} --apiIssuer ${{ secrets.APPSTORE_ISSUER_ID }} --verbose
+
+      - name: 上传到 TestFlight（如果是测试版）
+        if: ${{ env.BUILD_MODE_INPUT == 'release'}}
+        env: 
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ${{ env.IOS_IPA_PATH }}
+          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      
+  android-build:
+    name: Android 构建
+    if: ${{ contains(github.event.inputs.build-platform, 'android') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+
+      # 检出代码
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+    
+      # 设置java环境
+      - name: 设置 Android 构建的 Java 环境
+        uses: actions/setup-java@v4
+        with:
+            distribution: 'temurin'
+            java-version: '17'
+
+      # 设置 Flutter 环境
+      - name: 设置 Flutter 环境
+        uses: subosito/flutter-action@v2
+        with:
+            flutter-version: '3.24.0'
+
+      - run: flutter --version
+
+      # 在构建之前执行 flutter clean rm -f ios/Podfile.lock
+      - name: Flutter 清理
+        run: flutter clean
+
+      # flutter pub get
+      - name: 安装依赖
+        run: flutter pub get
+    
+        # # 运行 Flutter 分析 (可选，确保代码符合 Dart 规范)
+        # - name: Run Flutter analyze
+        #   run: flutter analyze
+
+        # # 运行 Flutter 测试 (可选)
+        # - name: Run Flutter tests
+        #   run: flutter test
+      - name: 设置默认构建类型
+        run: |
+          # 设置构建模式，如果输入为 release-testing 则使用 release，否则使用输入值或默认值
+          BUILD_MODE_INPUT="${{ github.event.inputs.build-mode || 'release' }}"
+          echo "BUILD_MODE_INPUT=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+          if [[ "$BUILD_MODE_INPUT" == "release-testing" ]]; then
+            echo "BUILD_MODE=release" >> $GITHUB_ENV
+          else
+            echo "BUILD_MODE=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+            # 其他配置在后续步骤中设置
+          fi
+    
+      - name: 设置默认构建语言
+        run: |
+            echo "BUILD_LOCALE=${{ github.event.inputs.build-language || 'en-US' }}" >> $GITHUB_ENV
+      
+      - name: 设置默认构建环境
+        run: |
+            echo "BUILD_ENV=${{ github.event.inputs.build-env || 'prod' }}" >> $GITHUB_ENV
+
+      - name: 获取环境变量
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_MODE_INPUT: ${{ env.BUILD_MODE_INPUT }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}
+        run: |
+          echo "BUILD_MODE=$BUILD_MODE, BUILD_MODE_INPUT=$BUILD_MODE_INPUT, BUILD_ENV=$BUILD_ENV, BUILD_LOCALE=$BUILD_LOCALE"
+
+      # ------------- build apk -----------
+      # Gradle 缓存 (Android)
+      - name: 缓存 Gradle 依赖
+        uses: actions/cache@v4
+        with:
+            path: ~/.gradle/caches
+            key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            restore-keys: |
+                ${{ runner.os }}-gradle-
+    
+      # # 解码 Base64 编码的 keystore，并存储到本地文件
+      - name: 解码并保存密钥库
+        run: |
+            echo ${{ secrets.ANDROID_ENCODED_KEYSTORE }} | base64 --decode > android/app/keystore.jks
+
+      # Set up environment variables for signing config
+      - name: 设置环境，创建 key.properties
+        run: |
+            cat <<EOF > android/key.properties
+            KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+            KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
+            KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+            KEYSTORE_PATH=keystore.jks
+            EOF
+
+      - name: 输出 android/key.properties 文件到日志
+        run: cat android/key.properties   
+
+      # Build Android APK  && AAB
+      - name: 构建 Android APK 和 AAB
+        run: |
+            echo "flutter build apk --$BUILD_MODE --dart-define=env=$BUILD_ENV --dart-define=locale=$BUILD_LOCALE"
+            flutter build apk --$BUILD_MODE --dart-define=env=$BUILD_ENV --dart-define=locale=$BUILD_LOCALE
+            echo "flutter build appbundle --$BUILD_MODE --dart-define=env=$BUILD_ENV --dart-define=locale=$BUILD_LOCALE"
+            flutter build appbundle --$BUILD_MODE --dart-define=env=$BUILD_ENV --dart-define=locale=$BUILD_LOCALE
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}   
+
+      # Archive android APK
+      - name: 归档 Android APK
+        uses: actions/upload-artifact@v4
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}   
+        with:
+            name: android-${{ env.BUILD_MODE }}-${{ env.BUILD_ENV }}-${{ env.BUILD_LOCALE }}-apk
+            path: build/app/outputs/flutter-apk/app-${{ env.BUILD_MODE }}.apk    
+      
+      # 上传 AAB 文件
+      - name: 上传 AAB
+        uses: actions/upload-artifact@v4
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+          BUILD_ENV: ${{ env.BUILD_ENV }}
+          BUILD_LOCALE: ${{ env.BUILD_LOCALE }}   
+        with:
+          name: android-${{ env.BUILD_MODE }}-${{ env.BUILD_ENV }}-${{ env.BUILD_LOCALE }}-aab
+          path: build/app/outputs/bundle/${{ env.BUILD_MODE }}/app-${{ env.BUILD_MODE }}.aab
+ 
+  orca-build:
+    name: Orca 构建
+    if: ${{ contains(github.event.inputs.build-platform, 'orca') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # 检出代码
+      - name: 检出仓库代码
+        uses: actions/checkout@v4
+
+      # 设置 Flutter 环境
+      - name: 设置 Flutter 环境
+        uses: subosito/flutter-action@v2
+        with:
+            flutter-version: '3.24.0'
+
+      - run: flutter --version
+
+      - name: 设置默认构建模式
+        run: |
+          echo "BUILD_MODE=${{ github.event.inputs.build-mode || 'release' }}" >> $GITHUB_ENV
+          # 设置构建模式，如果输入为 release-testing 则使用 release，否则使用输入值或默认值
+          BUILD_MODE_INPUT="${{ github.event.inputs.build-mode || 'release' }}"
+          echo "BUILD_MODE_INPUT=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+          if [[ "$BUILD_MODE_INPUT" == "release-testing" ]]; then
+            echo "BUILD_MODE=release" >> $GITHUB_ENV
+          else
+            echo "BUILD_MODE=$BUILD_MODE_INPUT" >> $GITHUB_ENV
+            # 其他配置在后续步骤中设置
+          fi
+          
+      - name: 获取环境变量
+        run: |
+          echo "BUILD_MODE=${{ env.BUILD_MODE }}, BUILD_MODE_INPUT=${{ env.BUILD_MODE_INPUT }}, BUILD_ENV=${{ env.BUILD_ENV }}, BUILD_LOCALE=${{ env.BUILD_LOCALE }}"
+          
+      # 使用 npm 脚本构建和打包
+      - name: 使用 npm 脚本构建和打包
+        env:
+          BUILD_MODE: ${{ env.BUILD_MODE }}
+        run: |
+          cd orca
+          echo "使用 $BUILD_MODE 模式构建 Orca Web 应用"
+          
+          # 根据构建模式选择对应的 npm 脚本
+          case $BUILD_MODE in 
+            profile)
+              echo "执行 npm run build:web:profile:clearCache"
+              npm run build:web:profile:clearCache
+              ;;
+            release)
+              echo "执行 npm run build:web:release:clearCache"
+              npm run build:web:release:clearCache
+              ;;
+            release-testing)
+              echo "执行 npm run build:web:release:clearCache"
+              npm run build:web:release:clearCache
+              ;;
+          esac
+          
+          # 等待一下确保文件系统同步
+          sleep 2
+          
+          # 获取版本号用于设置环境变量
+          version=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          echo "当前版本号: $version"
+          
+          echo "当前工作目录: $(pwd)"
+          echo "build 目录内容:"
+          ls -la build/ || echo "build 目录不存在"
+          
+          # 查找实际的 zip 文件
+          echo "查找 build 目录中的 zip 文件:"
+          find build/ -name "*.zip" -type f || echo "未找到 zip 文件"
+          
+          # 根据构建模式查找对应的 zip 文件
+          case $BUILD_MODE in
+            release)
+              zip_pattern="flutter_web_release_*.zip"
+              ;;
+            release-testing)
+              zip_pattern="flutter_web_release_*.zip"
+              ;;
+            profile)
+              zip_pattern="flutter_web_profile_*.zip"
+              ;;
+            debug)
+              zip_pattern="flutter_web_debug_*.zip"
+              ;;
+          esac
+          
+          echo "查找模式: $zip_pattern"
+          actual_zip=$(find build/ -name "$zip_pattern" -type f | head -1)
+          
+          if [ -n "$actual_zip" ]; then
+            echo "✅ 找到 zip 文件: $actual_zip"
+            echo "ORCA_ZIP_PATH=$(pwd)/$actual_zip" >> $GITHUB_ENV
+            echo "ORCA_ZIP_NAME=$(basename $actual_zip)" >> $GITHUB_ENV
+            pwd
+          else
+            echo "❌ 未找到匹配的 zip 文件"
+            echo "尝试查找任何 zip 文件..."
+            any_zip=$(find build/ -name "*.zip" -type f | head -1)
+            if [ -n "$any_zip" ]; then
+              echo "找到其他 zip 文件: $any_zip"
+              echo "ORCA_ZIP_PATH=$any_zip" >> $GITHUB_ENV
+              echo "ORCA_ZIP_NAME=$(basename $any_zip)" >> $GITHUB_ENV
+            else
+              echo "❌ 未找到任何 zip 文件"
+              exit 1
+            fi
+          fi
+
+      # 上传构建产物
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: orca-${{ env.BUILD_MODE }}-build
+          path: ${{ env.ORCA_ZIP_PATH }}
+      
+      - name: 创建目录结构
+        run: |
+          cd orca/build/flutter_web
+          mkdir -p flutter_web
+          # 将现有文件移动到新创建的 flutter_web 子目录中
+          if [ "$(ls -A . | grep -v flutter_web)" ]; then
+            mv * flutter_web/ 2>/dev/null || true
+          fi
+          echo "目录结构创建完成"
+          ls -la
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ORCA_ZIP_NAME }}
+          path: orca/build/flutter_web
+
+  notify:
+    name: 通知
+    runs-on: ubuntu-24.04
+    needs: 
+      - ios-build
+      - android-build
+      - orca-build
+    steps:
+      - name: 通过飞书应用通知
+        if: always()
+        run: |
+          # 初始化消息变量
+          # 计算成功任务数
+          SUCCESS_COUNT=0
+          TOTAL_COUNT=0
+
+          # 检查 iOS 构建状态
+          if [[ "${{ contains(github.event.inputs.build-platform, 'ios') }}" == "true" ]]; then
+            TOTAL_COUNT=$((TOTAL_COUNT + 1))
+            if [[ "${{ needs.ios-build.result }}" == "success" ]]; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            fi
+          fi
+          
+          # 检查 Android 构建状态
+          if [[ "${{ contains(github.event.inputs.build-platform, 'android') }}" == "true" ]]; then
+            TOTAL_COUNT=$((TOTAL_COUNT + 1))
+            if [[ "${{ needs.android-build.result }}" == "success" ]]; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            fi
+          fi
+          
+          # 检查 Orca 构建状态
+          if [[ "${{ contains(github.event.inputs.build-platform, 'orca') }}" == "true" ]]; then
+            TOTAL_COUNT=$((TOTAL_COUNT + 1))
+            if [[ "${{ needs.orca-build.result }}" == "success" ]]; then
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+            fi
+          fi
+
+          # 构建消息
+          message="🚀 **Flutter多平台构建完成**\n\n"
+          message+="**📊 构建摘要**\n"
+          message+="• 成功数: $SUCCESS_COUNT/$TOTAL_COUNT\n"
+          message+="• 构建模式: ${{ github.event.inputs.build-mode || 'profile' }}\n"
+          message+="• 构建环境: ${{ github.event.inputs.build-env || 'prod' }}\n"
+          message+="• 构建语言: ${{ github.event.inputs.build-language || 'en-US' }}\n\n"
+          
+          message+="**🔧 详细结果**\n"
+          
+          # 检查各平台构建状态
+          if [[ "${{ contains(github.event.inputs.build-platform, 'ios') }}" == "true" ]]; then
+            if [[ "${{ needs.ios-build.result }}" == "success" ]]; then
+              message+="• iOS: ✅ 成功\n"
+            else
+              message+="• iOS: ❌ 失败\n"
+            fi
+          fi
+          
+          if [[ "${{ contains(github.event.inputs.build-platform, 'android') }}" == "true" ]]; then
+            if [[ "${{ needs.android-build.result }}" == "success" ]]; then
+              message+="• Android: ✅ 成功\n"
+            else
+              message+="• Android: ❌ 失败\n"
+            fi
+          fi
+          
+          if [[ "${{ contains(github.event.inputs.build-platform, 'orca') }}" == "true" ]]; then
+            if [[ "${{ needs.orca-build.result }}" == "success" ]]; then
+              message+="• Orca Web: ✅ 成功\n"
+            else
+              message+="• Orca Web: ❌ 失败\n"
+            fi
+          fi
+          
+          message+="\n**🔗 相关链接**\n"
+          message+="[查看构建详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n"
+          message+="[下载构建产物](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\n"
+          
+          echo "message: $message"
+      
+          curl -X POST "$FEISHU_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "msg_type": "text",
+              "content": {
+                "text": "'"$message"'"
+              }
+            }'
+        env:
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        
