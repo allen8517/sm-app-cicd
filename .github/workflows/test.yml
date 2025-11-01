@@ -1,0 +1,10 @@
+# .github/workflows/test.yml
+name: Test Actions
+on: [push, workflow_dispatch]  # 允许手动触发
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test Step
+        run: echo "Workflow is working!"
